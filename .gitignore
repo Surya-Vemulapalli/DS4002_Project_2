@@ -1,0 +1,10 @@
+# The Living Planet Database (LPI) data cannot be redistributed under the
+# LPI Data Use Policy, so the whole data/ folder (raw CSV plus any cleaned or
+# intermediate files we create) is kept out of version control.
+# See README.md for how to download the dataset.
+data/
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
