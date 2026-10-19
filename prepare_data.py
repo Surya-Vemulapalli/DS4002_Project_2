@@ -15,15 +15,61 @@ CHOSEN_IDS = {
     # recent years; no US-only record goes past 2002.
     "Bald eagle": 2910,
     "California condor": 3328,  # California, number of individuals
-    "Peregrine falcon": 6005,   # Colville River area, Alaska, breeding pairs
+    # North America (US + Canada) index, 1970-2022. Same Breeding Bird Survey
+    # analysis and units as the bald eagle record, so the two are comparable.
+    "Peregrine falcon": 28210,
 }
 
 OUTPUT_PATH = Path(__file__).parent / "data" / "birds_cleaned.csv"
 EAGLE_PATH = Path(__file__).parent / "data" / "bald_eagle_cleaned.csv"
 
+# Condor counts from the USFWS 2025 Annual Population Status report (not part
+# of the LPD), already in long format in this file alongside LPD record 3328.
+CONDOR_PATH = Path(__file__).parent / "data" / "california_condor_long.csv"
+
+LPD_SOURCE = "Living Planet Database 2026.1"
+COLUMNS = ["species", "ID", "location", "units", "year", "count",
+           "log_count", "log_transform", "source"]
+
+
+def add_log_count(df: pd.DataFrame) -> pd.DataFrame:
+    """Add a log_count column, choosing the transform separately per series.
+
+    - Series with no zero counts use log(count).
+    - Series containing zeros (condor record 3328, 1987-1991) use
+      log(count + 1), because log(0) is undefined.
+    log(count + 1) is not used everywhere because for small index values
+    (e.g. 0.003) it is almost equal to the raw value, not its log.
+    """
+    df = df.copy()
+    has_zero = df.groupby(["species", "ID"])["count"].transform(lambda c: (c <= 0).any())
+    df["log_count"] = np.where(has_zero, np.log1p(df["count"]), np.log(df["count"].clip(lower=1e-12)))
+    df["log_transform"] = np.where(has_zero, "log(count + 1)", "log(count)")
+    return df
+
+
+def load_usfws_condor() -> pd.DataFrame:
+    """Return the USFWS condor series, renamed to match the LPD columns.
+
+    Each USFWS series keeps its own ID (e.g. USFWS-GLOBAL-WILD) so it is never
+    merged with LPD record 3328, which covers a different area.
+    """
+    condor = pd.read_csv(CONDOR_PATH).rename(columns={
+        "Year": "year",
+        "Series": "location",
+        "Value": "count",
+        "Units": "units",
+        "Source": "source",
+    })
+    # Rows for record 3328 come from the LPD itself, so skip them here.
+    condor = condor[condor["ID"].astype(str).str.startswith("USFWS")].copy()
+    condor["species"] = "California condor"
+    return condor
+
 
 def prepare_series() -> pd.DataFrame:
-    """Return a long table with columns: species, ID, location, units, year, count."""
+    """Return a long table with columns: species, ID, location, units, year,
+    count, log_count, source."""
     # Look records up by ID in the full database rather than the US-only
     # subset, because the bald eagle record also covers Canada.
     birds = load_lpd()
@@ -49,14 +95,15 @@ def prepare_series() -> pd.DataFrame:
 
     out = pd.concat(series, ignore_index=True)
     out = out.rename(columns={"Location": "location", "Units": "units"})
+    out["source"] = LPD_SOURCE
 
-    # log(count + 1): the condor series has zero wild birds in 1987-1991 and
-    # log(0) is undefined. Applied to every species so all models are fitted
-    # on the same scale.
-    out["log_count"] = np.log1p(out["count"])
+    # Add the USFWS condor series. IDs become strings since they mix numbers
+    # (LPD) and text (USFWS).
+    out = pd.concat([out, load_usfws_condor()], ignore_index=True)
+    out["ID"] = out["ID"].astype(str)
 
-    cols = ["species", "ID", "location", "units", "year", "count", "log_count"]
-    return out[cols].sort_values(["species", "year"])
+    out = add_log_count(out)
+    return out[COLUMNS].sort_values(["species", "ID", "year"])
 
 
 if __name__ == "__main__":
@@ -70,8 +117,11 @@ if __name__ == "__main__":
     print(f"Saved {len(eagle)} rows to {EAGLE_PATH}\n")
 
     # Quick look at each series, including gaps and zeros (log(0) is undefined).
-    for species, grp in data.groupby("species"):
+    # Summarise per series (species + ID), not per species, since the condor
+    # now has several separate series.
+    for (species, record_id), grp in data.groupby(["species", "ID"]):
         gaps = grp["year"].diff().gt(1).sum()
         zeros = (grp["count"] <= 0).sum()
-        print(f"{species}: {len(grp)} years, {gaps} gaps, {zeros} zero/negative counts")
-        print(grp[["year", "count", "log_count"]].round(3).to_string(index=False), "\n")
+        print(f"{species} [{record_id}]: {len(grp)} years "
+              f"({grp['year'].min()}-{grp['year'].max()}), "
+              f"{gaps} gaps, {zeros} zero/negative counts")
