@@ -9,6 +9,9 @@ data/
 # linked to rather than re-hosted; see README.md for the report links.
 data_external/
 
+# Course requirements checklist (working notes, not part of the repository)
+TIER_REQUIREMENTS.md
+
 # Python
 __pycache__/
 *.pyc

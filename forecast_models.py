@@ -25,6 +25,7 @@ models, and from a residual bootstrap for the logistic model.
 Outputs go to data/results/ (git-ignored).
 """
 
+import json
 import warnings
 from pathlib import Path
 
@@ -45,6 +46,7 @@ LPD_PATH = ROOT / "data" / "lpd_series.csv"
 FLOCKS_PATH = ROOT / "data_external" / "usfws_condor_flocks.csv"
 OUT_DIR = ROOT / "data" / "results"
 PLOT_DIR = OUT_DIR / "plots"
+MODEL_DIR = OUT_DIR / "forecast_models"
 
 FORECAST_YEARS = np.array([2028.0, 2035.0])
 TEST_FRACTION = 0.2      # last 20% of years held out (eagle, peregrine)
@@ -77,6 +79,19 @@ class Linear:
     def params(self):
         return {"slope_per_year": self.res.params[1]}
 
+    formula = "count = a + b * year"
+    how_to_predict = ("Load the .pickle with OLSResults.load(); "
+                      "forecast = model.predict([[1, year]]).")
+
+    def save(self, stem: Path) -> list[Path]:
+        """Save the fitted statsmodels results as a pickle."""
+        path = stem.with_suffix(".pickle")
+        self.res.save(str(path))
+        return [path]
+
+    def to_dict(self):
+        return {"a_intercept": self.res.params[0], "b_slope_per_year": self.res.params[1]}
+
 
 class Exponential:
     name = "Exponential"
@@ -97,6 +112,22 @@ class Exponential:
 
     def params(self):
         return {"growth_pct_per_year": np.expm1(self.res.params[1]) * 100}
+
+    formula = "ln(count) = a + b * year"
+    how_to_predict = ("Load the .pickle with OLSResults.load(); "
+                      "forecast = exp(model.predict([[1, year]]) + model.scale / 2) "
+                      "(log-normal mean back-transformation).")
+
+    def save(self, stem: Path) -> list[Path]:
+        """Save the fitted statsmodels results (log scale) as a pickle."""
+        path = stem.with_suffix(".pickle")
+        self.res.save(str(path))
+        return [path]
+
+    def to_dict(self):
+        return {"a_intercept_log": self.res.params[0], "b_slope_log": self.res.params[1],
+                "sigma2_log_residual_variance": self.s2,
+                "growth_pct_per_year": np.expm1(self.res.params[1]) * 100}
 
 
 def logistic_curve(t, K, r, t0):
@@ -147,6 +178,52 @@ class Logistic:
         K, r, t0 = self.popt
         return {"K": K, "r": r, "t0": t0,
                 "K_at_upper_bound": bool(np.isclose(K, K_MAX_MULTIPLE * self.counts.max(), rtol=1e-3))}
+
+    formula = "count = K / (1 + exp(-r * (year - t0)))"
+    how_to_predict = ("forecast = K / (1 + exp(-r * (year - t0))) using the K, r, t0 "
+                      "in 'parameters'. Prediction intervals: residual bootstrap using "
+                      "'training_years', 'training_counts' and 'residuals' (see Logistic.interval).")
+
+    def save(self, stem: Path) -> list[Path]:
+        """No separate object file: everything needed is in the JSON summary,
+        which is also safer to load than a pickle."""
+        return []
+
+    def to_dict(self):
+        K, r, t0 = self.popt
+        return {"K": K, "r": r, "t0": t0,
+                "training_years": self.years.tolist(),
+                "training_counts": self.counts.tolist(),
+                "residuals": self.resid.tolist(),
+                "bootstrap": {"n_resamples": N_BOOT, "seed": SEED,
+                              "K_bounds_multiple_of_max_count": [0.5, K_MAX_MULTIPLE]}}
+
+
+def save_forecast_model(record_id: str, label: str, model, is_best: bool,
+                        years: np.ndarray) -> list[Path]:
+    """Save one refitted forecasting model: an object file where available
+    (pickle) plus a readable JSON summary with everything needed to use it."""
+    MODEL_DIR.mkdir(parents=True, exist_ok=True)
+    slug = "".join(c if c.isalnum() else "_" for c in record_id.lower())
+    stem = MODEL_DIR / f"forecast_{slug}_{model.name.lower()}"
+    paths = model.save(stem)
+    summary = {
+        "series_id": record_id,
+        "series": label,
+        "model": model.name,
+        "best_model": bool(is_best),
+        "formula": model.formula,
+        "fitted_on_years": [int(years.min()), int(years.max())],
+        "n_obs": int(len(years)),
+        "parameters": model.to_dict(),
+        "how_to_predict": model.how_to_predict,
+        "object_file": paths[0].name if paths else None,
+        "created_by": "forecast_models.py",
+    }
+    json_path = stem.with_suffix(".json")
+    # default=float converts numpy numbers so json can write them.
+    json_path.write_text(json.dumps(summary, indent=2, default=float), encoding="utf-8")
+    return paths + [json_path]
 
 
 # (ID, label, data file, models, comparison method)
@@ -216,7 +293,7 @@ def load_series(record_id: str, path: Path) -> pd.DataFrame:
 
 
 def run():
-    comparison, forecasts, params, fits = [], [], [], {}
+    comparison, forecasts, params, fits, saved = [], [], [], {}, []
     for record_id, label, path, model_classes, method in SERIES:
         s = load_series(record_id, path)
         years = s["year"].to_numpy(dtype=float)
@@ -245,12 +322,13 @@ def run():
                                   "years_ahead": int(y - years[-1]),
                                   "best_model": cls.name == best})
             params.append({"ID": record_id, "series": label, "model": cls.name, **model.params()})
+            saved.extend(save_forecast_model(record_id, label, model, cls.name == best, years))
 
     comparison = pd.DataFrame(comparison)
     comparison["best"] = comparison.groupby("ID")["rmse"].transform("min") == comparison["rmse"]
     comparison["best_mae"] = comparison.groupby("ID")["mae"].transform("min") == comparison["mae"]
     comparison["best_mape"] = comparison.groupby("ID")["mape_pct"].transform("min") == comparison["mape_pct"]
-    return comparison, pd.DataFrame(forecasts), pd.DataFrame(params), fits
+    return comparison, pd.DataFrame(forecasts), pd.DataFrame(params), fits, saved
 
 
 # ---- Plots -------------------------------------------------------------
@@ -358,7 +436,7 @@ def plot_metric_comparison(comparison):
 
 
 if __name__ == "__main__":
-    comparison, forecasts, params, fits = run()
+    comparison, forecasts, params, fits, saved = run()
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     comparison.to_csv(OUT_DIR / "forecast_comparison.csv", index=False)
     forecasts.to_csv(OUT_DIR / "forecasts.csv", index=False)
@@ -378,3 +456,6 @@ if __name__ == "__main__":
             print(f"Logistic bootstrap fits that converged ({record_id}): "
                   f"{fit['models']['Logistic'][0].n_boot_ok}/{N_BOOT}")
     print(f"\nSaved results and plots to {OUT_DIR.relative_to(ROOT)}")
+    print(f"Saved {len(saved)} forecasting model files to {MODEL_DIR.relative_to(ROOT)}:")
+    for path in saved:
+        print(f"  {path.name}")
