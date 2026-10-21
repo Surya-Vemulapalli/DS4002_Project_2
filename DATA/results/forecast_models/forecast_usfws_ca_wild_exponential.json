@@ -10,10 +10,10 @@
   ],
   "n_obs": 6,
   "parameters": {
-    "a_intercept_log": -71.03896619749946,
-    "b_slope_log": 0.037750404235692925,
-    "sigma2_log_residual_variance": 0.0017991583399276589,
-    "growth_pct_per_year": 3.8472002315288862
+    "a_intercept_log": -71.03896619749693,
+    "b_slope_log": 0.03775040423569173,
+    "sigma2_log_residual_variance": 0.0017991583399278104,
+    "growth_pct_per_year": 3.847200231528763
   },
   "how_to_predict": "Load the .pickle with OLSResults.load(); forecast = exp(model.predict([[1, year]]) + model.scale / 2) (log-normal mean back-transformation).",
   "object_file": "forecast_usfws_ca_wild_exponential.pickle",

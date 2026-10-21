@@ -11,9 +11,9 @@
   "n_obs": 53,
   "parameters": {
     "a_intercept_log": -104.04675142845468,
-    "b_slope_log": 0.049763538718557876,
-    "sigma2_log_residual_variance": 0.007014212735099231,
-    "growth_pct_per_year": 5.102254085346872
+    "b_slope_log": 0.04976353871855792,
+    "sigma2_log_residual_variance": 0.007014212735099159,
+    "growth_pct_per_year": 5.102254085346877
   },
   "how_to_predict": "Load the .pickle with OLSResults.load(); forecast = exp(model.predict([[1, year]]) + model.scale / 2) (log-normal mean back-transformation).",
   "object_file": "forecast_28210_exponential.pickle",

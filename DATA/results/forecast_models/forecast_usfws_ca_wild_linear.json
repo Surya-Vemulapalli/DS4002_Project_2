@@ -10,8 +10,8 @@
   ],
   "n_obs": 6,
   "parameters": {
-    "a_intercept": -13024.744623657018,
-    "b_slope_per_year": 6.5403225806457055
+    "a_intercept": -13024.744623656507,
+    "b_slope_per_year": 6.540322580645455
   },
   "how_to_predict": "Load the .pickle with OLSResults.load(); forecast = model.predict([[1, year]]).",
   "object_file": "forecast_usfws_ca_wild_linear.pickle",

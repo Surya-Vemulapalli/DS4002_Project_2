@@ -10,10 +10,10 @@
   ],
   "n_obs": 14,
   "parameters": {
-    "a_intercept_log": -58.39294071588654,
-    "b_slope_log": 0.03115954276213337,
-    "sigma2_log_residual_variance": 0.00975183116252442,
-    "growth_pct_per_year": 3.165008306127226
+    "a_intercept_log": -58.39294071588941,
+    "b_slope_log": 0.031159542762134798,
+    "sigma2_log_residual_variance": 0.009751831162524479,
+    "growth_pct_per_year": 3.165008306127374
   },
   "how_to_predict": "Load the .pickle with OLSResults.load(); forecast = exp(model.predict([[1, year]]) + model.scale / 2) (log-normal mean back-transformation).",
   "object_file": "forecast_usfws_azut_wild_exponential.pickle",

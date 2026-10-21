@@ -1,11 +1,11 @@
 ID,series,model,slope_per_year,growth_pct_per_year,K,r,t0,K_at_upper_bound
 2910,Bald eagle,Linear,0.00646648121270767,,,,,
-2910,Bald eagle,Exponential,,3.5311836196945396,,,,
-2910,Bald eagle,Logistic,,,0.40859018352264487,0.07535040397750202,1993.4354115288852,False
-28210,Peregrine falcon,Linear,0.0005094984679890384,,,,,
-28210,Peregrine falcon,Exponential,,5.102254085346872,,,,
-28210,Peregrine falcon,Logistic,,,0.04939069976974179,0.06697604122246846,2017.394626051759,False
-USFWS-CA-WILD,"California condor, CA wild flock",Linear,6.5403225806457055,,,,,
-USFWS-CA-WILD,"California condor, CA wild flock",Exponential,,3.8472002315288862,,,,
-USFWS-AZUT-WILD,"California condor, AZ/UT wild flock",Linear,2.8109890109889335,,,,,
-USFWS-AZUT-WILD,"California condor, AZ/UT wild flock",Exponential,,3.165008306127226,,,,
+2910,Bald eagle,Exponential,,3.5311836196945405,,,,
+2910,Bald eagle,Logistic,,,0.4085901834214803,0.07535040400977379,1993.4354115207932,False
+28210,Peregrine falcon,Linear,0.0005094984679890383,,,,,
+28210,Peregrine falcon,Exponential,,5.102254085346877,,,,
+28210,Peregrine falcon,Logistic,,,0.04939069976708316,0.0669760412250126,2017.3946260500713,False
+USFWS-CA-WILD,"California condor, CA wild flock",Linear,6.540322580645455,,,,,
+USFWS-CA-WILD,"California condor, CA wild flock",Exponential,,3.847200231528763,,,,
+USFWS-AZUT-WILD,"California condor, AZ/UT wild flock",Linear,2.810989010989077,,,,,
+USFWS-AZUT-WILD,"California condor, AZ/UT wild flock",Exponential,,3.165008306127374,,,,

@@ -11,7 +11,7 @@
   "n_obs": 53,
   "parameters": {
     "a_intercept": -1.0052589421061207,
-    "b_slope_per_year": 0.0005094984679890384
+    "b_slope_per_year": 0.0005094984679890383
   },
   "how_to_predict": "Load the .pickle with OLSResults.load(); forecast = model.predict([[1, year]]).",
   "object_file": "forecast_28210_linear.pickle",
