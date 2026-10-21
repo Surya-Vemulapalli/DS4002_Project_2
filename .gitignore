@@ -4,6 +4,11 @@
 # See README.md for how to download the dataset.
 data/
 
+# External (USFWS) data and source reports are also kept out of version
+# control. The reports are public domain, but DOI asks that its documents be
+# linked to rather than re-hosted; see README.md for the report links.
+data_external/
+
 # Python
 __pycache__/
 *.pyc
