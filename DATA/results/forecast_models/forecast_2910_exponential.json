@@ -1,0 +1,21 @@
+{
+  "series_id": "2910",
+  "series": "Bald eagle",
+  "model": "Exponential",
+  "best_model": false,
+  "formula": "ln(count) = a + b * year",
+  "fitted_on_years": [
+    1970,
+    2022
+  ],
+  "n_obs": 53,
+  "parameters": {
+    "a_intercept_log": -70.91508658652589,
+    "b_slope_log": 0.03470267234985166,
+    "sigma2_log_residual_variance": 0.019327862828771275,
+    "growth_pct_per_year": 3.5311836196945396
+  },
+  "how_to_predict": "Load the .pickle with OLSResults.load(); forecast = exp(model.predict([[1, year]]) + model.scale / 2) (log-normal mean back-transformation).",
+  "object_file": "forecast_2910_exponential.pickle",
+  "created_by": "forecast_models.py"
+}

@@ -1,0 +1,19 @@
+{
+  "series_id": "2910",
+  "series": "Bald eagle",
+  "model": "Linear",
+  "best_model": false,
+  "formula": "count = a + b * year",
+  "fitted_on_years": [
+    1970,
+    2022
+  ],
+  "n_obs": 53,
+  "parameters": {
+    "a_intercept": -12.687805934526773,
+    "b_slope_per_year": 0.00646648121270767
+  },
+  "how_to_predict": "Load the .pickle with OLSResults.load(); forecast = model.predict([[1, year]]).",
+  "object_file": "forecast_2910_linear.pickle",
+  "created_by": "forecast_models.py"
+}

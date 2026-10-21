@@ -1,13 +1,15 @@
-# The Living Planet Database (LPI) data cannot be redistributed under the
-# LPI Data Use Policy, so the whole data/ folder (raw CSV plus any cleaned or
-# intermediate files we create) is kept out of version control.
-# See README.md for how to download the dataset.
-data/
+# ---------------------------------------------------------------------------
+# OUTPUT/
+# Figures and result tables are committed (with the LPD citation). Saved model
+# files are not: they contain the data each model was fitted on.
+# ---------------------------------------------------------------------------
+/OUTPUT/models/*
+!/OUTPUT/models/.gitkeep
 
-# External (USFWS) data and source reports are also kept out of version
-# control. The reports are public domain, but DOI asks that its documents be
-# linked to rather than re-hosted; see README.md for the report links.
-data_external/
+# ---------------------------------------------------------------------------
+# Old layout, kept ignored until its contents are moved into DATA/ (step 2).
+# ---------------------------------------------------------------------------
+/data_external/
 
 # Course requirements checklist (working notes, not part of the repository)
 TIER_REQUIREMENTS.md
