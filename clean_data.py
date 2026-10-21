@@ -20,7 +20,13 @@ USFWS_PATH = ROOT / "data_external" / "usfws_condor.csv"
 
 LPD_IDS = ["2910", "28210", "3328"]
 COLUMNS = ["species", "ID", "location", "units", "year", "count",
-           "log_count", "source", "zero_count"]
+           "log_count", "source", "zero_count", "outlier_flag"]
+
+# Single-year spikes to flag (not remove), as (record ID, year). Models can
+# then be fitted with and without these rows.
+OUTLIERS = [
+    ("2910", 2009),  # Bald eagle: 0.352, above both 2008 (0.313) and 2010 (0.301)
+]
 
 
 def clean(df: pd.DataFrame) -> pd.DataFrame:
@@ -34,7 +40,25 @@ def clean(df: pd.DataFrame) -> pd.DataFrame:
     df["zero_count"] = df["count"] == 0
     df["log_count"] = np.log(df["count"].where(df["count"] > 0))
 
+    df = flag_outliers(df)
     return df[COLUMNS].sort_values(["species", "ID", "year"]).reset_index(drop=True)
+
+
+def flag_outliers(df: pd.DataFrame) -> pd.DataFrame:
+    """Add outlier_flag: False everywhere, True for the rows in OUTLIERS."""
+    df = df.copy()
+    df["outlier_flag"] = False
+    for record_id, year in OUTLIERS:
+        series = df[df["ID"] == record_id].set_index("year")["count"]
+        hit = (df["ID"] == record_id) & (df["year"] == year)
+        # Safety checks: the row must exist exactly once and really be a
+        # spike above both neighbouring years.
+        assert hit.sum() == 1, f"Expected one row for {record_id} {year}"
+        assert series[year] > series[year - 1] and series[year] > series[year + 1], (
+            f"{record_id} {year} is not above both neighbouring years"
+        )
+        df.loc[hit, "outlier_flag"] = True
+    return df
 
 
 if __name__ == "__main__":
