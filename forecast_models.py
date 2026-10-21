@@ -8,11 +8,16 @@ Models (all fitted on every observed year of each series):
                (bald eagle and peregrine only; the condor series are too
                short and release-driven for a reliable carrying capacity)
 
-Comparison (RMSE on the original count scale):
+Comparison (MAE, MAPE and RMSE, all on the original count scale):
 - Bald eagle, peregrine: time-based holdout, train on earlier years and test
   on the last 20% of years. No random splits.
 - Condor flocks: leave-one-out cross-validation (LOOCV), since the series are
   too short for a holdout.
+- MAE  = mean(|actual - predicted|)
+  MAPE = mean(|actual - predicted| / |actual|) * 100   (percent)
+  RMSE = sqrt(mean((actual - predicted)^2))
+- The "best" model (used to flag forecasts and label plots) is still chosen
+  by RMSE. best_mae and best_mape columns show the winner under each metric.
 
 95% prediction intervals: from the regression for linear and exponential
 models, and from a residual bootstrap for the logistic model.
@@ -153,27 +158,56 @@ SERIES = [
 ]
 
 
-def rmse(errors) -> float:
-    return float(np.sqrt(np.mean(np.square(errors))))
+# ---- Error metrics -----------------------------------------------------
+METRICS = ["mae", "mape_pct", "rmse"]
+METRIC_LABELS = {"mae": "MAE", "mape_pct": "MAPE (%)", "rmse": "RMSE"}
 
 
-def holdout_rmse(model_cls, years, counts):
+def mae(actual, predicted) -> float:
+    """Mean absolute error."""
+    return float(np.mean(np.abs(np.asarray(actual) - np.asarray(predicted))))
+
+
+def rmse(actual, predicted) -> float:
+    """Root mean squared error."""
+    return float(np.sqrt(np.mean(np.square(np.asarray(actual) - np.asarray(predicted)))))
+
+
+def mape(actual, predicted) -> float:
+    """Mean absolute percentage error, in percent. Points with actual == 0 are
+    skipped because the percentage error is undefined there."""
+    actual, predicted = np.asarray(actual, dtype=float), np.asarray(predicted, dtype=float)
+    keep = actual != 0
+    if not keep.any():
+        return float("nan")
+    return float(np.mean(np.abs((actual[keep] - predicted[keep]) / actual[keep])) * 100)
+
+
+def score(actual, predicted) -> dict:
+    """All three metrics for one set of held-out points."""
+    return {"mae": mae(actual, predicted),
+            "mape_pct": mape(actual, predicted),
+            "rmse": rmse(actual, predicted)}
+
+
+def holdout_scores(model_cls, years, counts):
     """Train on earlier years, test on the last TEST_FRACTION of years."""
     n_test = int(np.ceil(TEST_FRACTION * len(years)))
     model = model_cls().fit(years[:-n_test], counts[:-n_test])
-    errors = counts[-n_test:] - model.predict(years[-n_test:])
+    predicted = model.predict(years[-n_test:])
     test_span = f"{int(years[-n_test])}-{int(years[-1])}"
-    return rmse(errors), test_span
+    return score(counts[-n_test:], predicted), test_span
 
 
-def loocv_rmse(model_cls, years, counts):
+def loocv_scores(model_cls, years, counts):
     """Leave each observation out once, predict it from the rest."""
-    errors = []
+    actual, predicted = [], []
     for i in range(len(years)):
         keep = np.arange(len(years)) != i
         model = model_cls().fit(years[keep], counts[keep])
-        errors.append(counts[i] - model.predict(years[i:i + 1])[0])
-    return rmse(errors), "leave-one-out"
+        actual.append(counts[i])
+        predicted.append(model.predict(years[i:i + 1])[0])
+    return score(actual, predicted), "leave-one-out"
 
 
 def load_series(record_id: str, path: Path) -> pd.DataFrame:
@@ -191,12 +225,12 @@ def run():
         # 1. Compare models.
         scores = {}
         for cls in model_classes:
-            score, detail = (holdout_rmse if method == "holdout" else loocv_rmse)(cls, years, counts)
-            scores[cls.name] = score
+            sc, detail = (holdout_scores if method == "holdout" else loocv_scores)(cls, years, counts)
+            scores[cls.name] = sc["rmse"]
             comparison.append({"ID": record_id, "series": label, "model": cls.name,
                                "method": method, "test": detail, "n_obs": len(years),
-                               "rmse": score})
-        best = min(scores, key=scores.get)
+                               **sc})
+        best = min(scores, key=scores.get)  # best model is chosen by RMSE
 
         # 2. Refit on all years and forecast.
         fits[record_id] = {"label": label, "data": s, "models": {}}
@@ -214,6 +248,8 @@ def run():
 
     comparison = pd.DataFrame(comparison)
     comparison["best"] = comparison.groupby("ID")["rmse"].transform("min") == comparison["rmse"]
+    comparison["best_mae"] = comparison.groupby("ID")["mae"].transform("min") == comparison["mae"]
+    comparison["best_mape"] = comparison.groupby("ID")["mape_pct"].transform("min") == comparison["mape_pct"]
     return comparison, pd.DataFrame(forecasts), pd.DataFrame(params), fits
 
 
@@ -288,6 +324,39 @@ def plot_all(fits, comparison):
     plt.close(fig)
 
 
+def plot_metric_comparison(comparison):
+    """One row per series, one column per metric, one bar per model.
+    Each panel has its own y-axis because the series are on different scales.
+    The lowest bar in each panel (the best model for that metric) is outlined."""
+    PLOT_DIR.mkdir(parents=True, exist_ok=True)
+    series_ids = list(dict.fromkeys(comparison["ID"]))
+    fig, axes = plt.subplots(len(series_ids), len(METRICS),
+                             figsize=(11, 2.8 * len(series_ids)), squeeze=False)
+    for r, record_id in enumerate(series_ids):
+        d = comparison[comparison["ID"] == record_id].reset_index(drop=True)
+        method = d["method"].iloc[0]
+        for c, metric in enumerate(METRICS):
+            ax = axes[r][c]
+            bars = ax.bar(d["model"], d[metric], color=[COLORS[m] for m in d["model"]], width=0.6)
+            winner = int(d[metric].idxmin())
+            bars[winner].set_edgecolor(INK)
+            bars[winner].set_linewidth(2)
+            for b, v in zip(bars, d[metric]):
+                ax.annotate(f"{v:.3g}", (b.get_x() + b.get_width() / 2, b.get_height()),
+                            ha="center", va="bottom", fontsize=8, color=INK_2)
+            ax.set_ylim(top=d[metric].max() * 1.18)
+            ax.grid(axis="x", visible=False)
+            if r == 0:
+                ax.set_title(METRIC_LABELS[metric], loc="left", fontsize=11, fontweight="bold")
+            if c == 0:
+                ax.set_ylabel(f"{d['series'].iloc[0]}\n({method})", fontsize=8.5)
+    fig.suptitle("Model comparison: MAE, MAPE and RMSE (lower is better, outlined bar = best)",
+                 x=0.03, ha="left", fontsize=13, fontweight="bold")
+    fig.tight_layout(rect=(0, 0, 1, 0.97))
+    fig.savefig(PLOT_DIR / "model_comparison_metrics.png", dpi=200)
+    plt.close(fig)
+
+
 if __name__ == "__main__":
     comparison, forecasts, params, fits = run()
     OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -295,9 +364,10 @@ if __name__ == "__main__":
     forecasts.to_csv(OUT_DIR / "forecasts.csv", index=False)
     params.to_csv(OUT_DIR / "forecast_parameters.csv", index=False)
     plot_all(fits, comparison)
+    plot_metric_comparison(comparison)
 
     pd.set_option("display.width", 220)
-    print("Model comparison (RMSE on the count scale):\n")
+    print("Model comparison (MAE, MAPE %, RMSE on the count scale):\n")
     print(comparison.round(5).to_string(index=False))
     print("\nForecasts (95% prediction intervals):\n")
     print(forecasts.round(4).to_string(index=False))
