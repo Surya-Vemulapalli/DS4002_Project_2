@@ -1,0 +1,6 @@
+model,intervention_year,n,resid_df,r2,adj_r2,durbin_watson,se_type,level_change_pct,level_p,slope_change_pct_per_yr,slope_p,growth_pre_pct_per_yr,growth_post_pct_per_yr,growth_since_pct,growth_lower_bound_pct,growth_p_one_sided,meets_20pct,vs_pretrend_pct,note
+model_1_bald_eagle_all_years.pickle,2007,53,49,0.985,0.984,0.43,"Newey-West, 3 lags",-13.39,0.0158,-3.15,0.0,4.58,1.28,21.1,15.4,0.3798,False,-46.4,
+model_2_bald_eagle_no_2009_outlier.pickle,2007,52,48,0.985,0.985,0.34,"Newey-West, 3 lags",-15.52,0.0051,-2.94,0.0,4.58,1.5,25.1,19.7,0.059,False,-46.0,
+model_3_peregrine_falcon.pickle,1999,53,49,0.992,0.991,0.15,"Newey-West, 3 lags",12.67,0.0539,-0.95,0.0236,5.17,4.17,155.9,141.0,0.0,True,-9.5,
+model_4_condor_ca_flock_alone.pickle,2019,6,2,0.995,0.989,2.97,OLS (too few points for Newey-West),-6.65,0.1898,-2.57,0.0781,5.91,3.19,20.7,9.7,0.4365,False,-20.2,
+model_5_condor_ca_vs_az_ut.pickle,2019,20,12,0.976,0.963,AZ/UT 1.78; CA 2.97,HC3,-24.06,0.1512,0.89,0.8545,,,,,,,,CA minus AZ/UT difference in post-2019 changes
