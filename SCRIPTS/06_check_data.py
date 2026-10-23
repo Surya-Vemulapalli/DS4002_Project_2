@@ -1,7 +1,14 @@
-"""Data checks for the segmented regression project (no modelling here)."""
+"""Data checks for the segmented regression project (no modelling here).
+
+Also saves explanatory plots of the cleaned data to DATA/plots/.
+"""
 
 from pathlib import Path
 
+import matplotlib
+
+matplotlib.use("Agg")  # save to file without opening a window
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
@@ -9,6 +16,8 @@ ROOT = Path(__file__).parent.parent
 LPD_PATH = ROOT / "DATA" / "lpd_series.csv"
 USFWS_PATH = ROOT / "DATA" / "usfws_condor.csv"
 FLOCKS_PATH = ROOT / "DATA" / "usfws_condor_flocks.csv"
+PLOT_DIR = ROOT / "DATA" / "plots"
+LPD_CITATION = "Data: ZSL/WWF 2026. Living Planet Database 2026.1 <www.livingplanetindex.org/data_portal>"
 
 # Iteration 5: condor series chosen for the analysis, with their role.
 # USFWS global wild / captive / total series are deliberately not used.
@@ -143,6 +152,75 @@ def check_condor_selection() -> tuple[pd.DataFrame, pd.DataFrame]:
     return pd.DataFrame(summary), growth.round(3)
 
 
+def plot_lpd_indices() -> Path:
+    """Plot the bald eagle (2910) and peregrine falcon (28210) index series.
+
+    A log y-axis is used because the two indices differ by about a factor of
+    10; on a log scale equal slopes mean equal percentage growth, so the two
+    trends can be compared directly.
+    """
+    lpd = pd.read_csv(LPD_PATH, dtype={"ID": str})
+    fig, ax = plt.subplots(figsize=(8, 4.8))
+    for record_id, label, color in [("2910", "Bald eagle", "tab:blue"),
+                                    ("28210", "Peregrine falcon", "tab:red")]:
+        s = lpd[lpd["ID"] == record_id].sort_values("year")
+        ax.plot(s["year"], s["count"], marker="o", markersize=3, color=color, label=label)
+
+    ax.set_yscale("log")
+    ax.set_title("Bald Eagle and Peregrine Falcon Population Indices, 1970-2022")
+    ax.set_xlabel("Year")
+    ax.set_ylabel("Population index value (log scale)")
+    ax.grid(True, which="both", alpha=0.3)
+    ax.legend(loc="upper left")
+    fig.text(0.01, 0.01, LPD_CITATION, fontsize=7, color="gray")
+    fig.tight_layout(rect=(0, 0.03, 1, 1))
+
+    PLOT_DIR.mkdir(parents=True, exist_ok=True)
+    path = PLOT_DIR / "lpd_population_indices_1970_2022.png"
+    fig.savefig(path, dpi=200)
+    plt.close(fig)
+    return path
+
+
+def plot_condor_series() -> Path:
+    """Plot every California condor series in the cleaned data.
+
+    LPD record 3328 (California, 1982-1993) plus the USFWS global wild,
+    captive and total counts (2010-2025) and the single 2025 California wild
+    count. All are numbers of individuals, so a linear y-axis is used.
+    """
+    data = load_all()
+    fig, ax = plt.subplots(figsize=(8, 4.8))
+    for record_id, label, color in [
+        ("3328", "California, LPD (1982-1993)", "tab:blue"),
+        ("USFWS-GLOBAL-WILD", "Global wild", "tab:orange"),
+        ("USFWS-GLOBAL-CAPTIVE", "Global captive", "tab:green"),
+        ("USFWS-GLOBAL-TOTAL", "Global total (wild + captive)", "tab:red"),
+    ]:
+        s = data[data["ID"] == record_id].sort_values("year")
+        ax.plot(s["year"], s["count"], marker="o", markersize=3, color=color, label=label)
+
+    # Only one year exists for the California wild series, so mark it alone.
+    ca = data[data["ID"] == "USFWS-CA-WILD"]
+    ax.scatter(ca["year"], ca["count"], marker="*", s=80, color="black", zorder=3,
+               label="California wild (2025 only)")
+
+    ax.set_title("California Condor Population Counts by Series")
+    ax.set_xlabel("Year")
+    ax.set_ylabel("Number of individuals")
+    ax.grid(True, alpha=0.3)
+    ax.legend(loc="upper left")
+    fig.text(0.01, 0.01, f"{LPD_CITATION}; USFWS 2025 Annual Population Status",
+             fontsize=7, color="gray")
+    fig.tight_layout(rect=(0, 0.03, 1, 1))
+
+    PLOT_DIR.mkdir(parents=True, exist_ok=True)
+    path = PLOT_DIR / "condor_population_by_series.png"
+    fig.savefig(path, dpi=200)
+    plt.close(fig)
+    return path
+
+
 if __name__ == "__main__":
     pd.set_option("display.width", 250)
     print("Iteration 1: LPD bird series\n")
@@ -166,3 +244,6 @@ if __name__ == "__main__":
     print(selection.to_string(index=False))
     print("\nLog growth per year between consecutive observed years:\n")
     print(growth.to_string(index=False))
+
+    print(f"\nSaved {plot_lpd_indices().relative_to(ROOT)}")
+    print(f"Saved {plot_condor_series().relative_to(ROOT)}")

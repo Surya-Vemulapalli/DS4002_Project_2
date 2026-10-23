@@ -12,19 +12,24 @@ For each model:
 For model 5 (CA vs AZ/UT), it tests whether California's post-2019 level and
 slope changes differ from Arizona/Utah's (`flock_after`, `flock_time_after`).
 
-Usage: put this file next to the .pickle files and run
-    python significance_tests.py
-Output prints to the screen and is saved to significance_test_results.csv.
+Usage: run 08_fit_models.py first, then from the repository's top folder run
+    python SCRIPTS/significance_tests.py
+It reads the model .pickle files in OUTPUT/models/. Output prints to the
+screen and is saved to OUTPUT/tables/significance_test_results.csv.
 Requires: pip install statsmodels pandas numpy scipy
 """
 
-import glob
 import pickle
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from scipy import stats
 from statsmodels.stats.stattools import durbin_watson
+
+ROOT = Path(__file__).parent.parent
+MODEL_DIR = ROOT / "OUTPUT" / "models"
+OUT_PATH = ROOT / "OUTPUT" / "tables" / "significance_test_results.csv"
 
 ALPHA = 0.05
 THRESHOLD = 0.20
@@ -64,8 +69,10 @@ def flag(p):
 
 def main():
     rows = []
-    for path in sorted(glob.glob("*.pickle")):
-        saved = load(path)
+    # Only the segmented-regression models; forecast models are in models/forecast/.
+    for model_path in sorted(MODEL_DIR.glob("*.pickle")):
+        saved = load(model_path)
+        path = model_path.name  # file name, used for labels and the start year
         model = saved.model
         names = list(model.exog_names)
         X = pd.DataFrame(model.exog, columns=names)
@@ -164,8 +171,8 @@ def main():
             "vs_pretrend_pct": round(100 * effect, 1),
         })
 
-    pd.DataFrame(rows).to_csv("significance_test_results.csv", index=False)
-    print("\nSaved significance_test_results.csv")
+    pd.DataFrame(rows).to_csv(OUT_PATH, index=False)
+    print(f"\nSaved {OUT_PATH.relative_to(ROOT)}")
 
 
 if __name__ == "__main__":

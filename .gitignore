@@ -1,5 +1,10 @@
+# Raw Living Planet Database download: the LPI Data Use Policy does not allow
+# publishing it in its original format. Download it yourself (see DATA/README.md).
+DATA/LPD_public.csv
+
 # Course requirements checklist (working notes, not part of the repository)
 TIER_REQUIREMENTS.md
+PROJECT_SPEC.md
 
 # Python
 __pycache__/
