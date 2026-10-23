@@ -22,7 +22,8 @@ Comparison (MAE, MAPE and RMSE, all on the original count scale):
 95% prediction intervals: from the regression for linear and exponential
 models, and from a residual bootstrap for the logistic model.
 
-Outputs go to data/results/ (git-ignored).
+Tables go to OUTPUT/tables/, plots to OUTPUT/figures/ and saved models to
+OUTPUT/models/forecast/.
 """
 
 import json
@@ -41,12 +42,12 @@ from scipy.optimize import OptimizeWarning, curve_fit
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
 
-ROOT = Path(__file__).parent
-LPD_PATH = ROOT / "data" / "lpd_series.csv"
-FLOCKS_PATH = ROOT / "data_external" / "usfws_condor_flocks.csv"
-OUT_DIR = ROOT / "data" / "results"
-PLOT_DIR = OUT_DIR / "plots"
-MODEL_DIR = OUT_DIR / "forecast_models"
+ROOT = Path(__file__).parent.parent
+LPD_PATH = ROOT / "DATA" / "lpd_series.csv"
+FLOCKS_PATH = ROOT / "DATA" / "usfws_condor_flocks.csv"
+OUT_DIR = ROOT / "OUTPUT" / "tables"
+PLOT_DIR = ROOT / "OUTPUT" / "figures"
+MODEL_DIR = ROOT / "OUTPUT" / "models" / "forecast"
 
 FORECAST_YEARS = np.array([2028.0, 2035.0])
 TEST_FRACTION = 0.2      # last 20% of years held out (eagle, peregrine)
@@ -218,7 +219,7 @@ def save_forecast_model(record_id: str, label: str, model, is_best: bool,
         "parameters": model.to_dict(),
         "how_to_predict": model.how_to_predict,
         "object_file": paths[0].name if paths else None,
-        "created_by": "forecast_models.py",
+        "created_by": "10_forecast_models.py",
     }
     json_path = stem.with_suffix(".json")
     # default=float converts numpy numbers so json can write them.
@@ -455,7 +456,7 @@ if __name__ == "__main__":
         if "Logistic" in fit["models"]:
             print(f"Logistic bootstrap fits that converged ({record_id}): "
                   f"{fit['models']['Logistic'][0].n_boot_ok}/{N_BOOT}")
-    print(f"\nSaved results and plots to {OUT_DIR.relative_to(ROOT)}")
+    print(f"\nSaved tables to {OUT_DIR.relative_to(ROOT)} and plots to {PLOT_DIR.relative_to(ROOT)}")
     print(f"Saved {len(saved)} forecasting model files to {MODEL_DIR.relative_to(ROOT)}:")
     for path in saved:
         print(f"  {path.name}")

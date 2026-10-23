@@ -189,5 +189,5 @@
   },
   "how_to_predict": "forecast = K / (1 + exp(-r * (year - t0))) using the K, r, t0 in 'parameters'. Prediction intervals: residual bootstrap using 'training_years', 'training_counts' and 'residuals' (see Logistic.interval).",
   "object_file": null,
-  "created_by": "forecast_models.py"
+  "created_by": "10_forecast_models.py"
 }

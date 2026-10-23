@@ -1,10 +1,9 @@
-"""Clean data/birds_consolidated.csv and split it by source.
+"""Clean DATA/birds_consolidated.csv and split it by source.
 
 Outputs:
-- data/lpd_series.csv: Living Planet Database rows (records 2910, 28210,
-  3328). LPD data cannot be redistributed, so this stays in the git-ignored
-  data/ folder.
-- data_external/usfws_condor.csv: USFWS condor rows. US government work
+- DATA/lpd_series.csv: Living Planet Database rows (records 2910, 28210,
+  3328).
+- DATA/usfws_condor.csv: USFWS condor rows. US government work
   (public domain), so this can be committed.
 """
 
@@ -13,10 +12,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-ROOT = Path(__file__).parent
-INPUT_PATH = ROOT / "data" / "birds_consolidated.csv"
-LPD_PATH = ROOT / "data" / "lpd_series.csv"
-USFWS_PATH = ROOT / "data_external" / "usfws_condor.csv"
+ROOT = Path(__file__).parent.parent
+INPUT_PATH = ROOT / "DATA" / "birds_consolidated.csv"
+LPD_PATH = ROOT / "DATA" / "lpd_series.csv"
+USFWS_PATH = ROOT / "DATA" / "usfws_condor.csv"
 
 LPD_IDS = ["2910", "28210", "3328"]
 COLUMNS = ["species", "ID", "location", "units", "year", "count",

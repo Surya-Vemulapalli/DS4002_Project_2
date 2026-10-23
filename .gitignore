@@ -1,16 +1,3 @@
-# ---------------------------------------------------------------------------
-# OUTPUT/
-# Figures and result tables are committed (with the LPD citation). Saved model
-# files are not: they contain the data each model was fitted on.
-# ---------------------------------------------------------------------------
-/OUTPUT/models/*
-!/OUTPUT/models/.gitkeep
-
-# ---------------------------------------------------------------------------
-# Old layout, kept ignored until its contents are moved into DATA/ (step 2).
-# ---------------------------------------------------------------------------
-/data_external/
-
 # Course requirements checklist (working notes, not part of the repository)
 TIER_REQUIREMENTS.md
 

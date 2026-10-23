@@ -1,4 +1,4 @@
-"""Iteration 4: build data_external/usfws_condor_flocks.csv.
+"""Iteration 4: build DATA/usfws_condor_flocks.csv.
 
 Annual counts for the California and Arizona/Utah wild condor flocks, typed in
 by hand from US Fish and Wildlife Service reports. Every value is listed below
@@ -22,7 +22,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-OUT_PATH = Path(__file__).parent / "data_external" / "usfws_condor_flocks.csv"
+OUT_PATH = Path(__file__).parent.parent / "DATA" / "usfws_condor_flocks.csv"
 
 # Reports used (name, URL).
 R2025 = ("USFWS California Condor Recovery Program 2025 Annual Population Status",

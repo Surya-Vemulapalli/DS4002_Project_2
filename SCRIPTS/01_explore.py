@@ -3,7 +3,7 @@ time series per species before modelling."""
 
 import pandas as pd
 
-from load_data import SPECIES, load_species, year_columns
+from helpers import SPECIES, load_species, year_columns
 
 birds = load_species()
 years = year_columns(birds)

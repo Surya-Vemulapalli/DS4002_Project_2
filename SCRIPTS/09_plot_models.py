@@ -1,13 +1,12 @@
 """Plot observed data and fitted segmented regression lines.
 
-Fitted lines come from the models saved by fit_models.py
-(data/results/models/). The pre- and post-breakpoint segments are drawn
+Fitted lines come from the models saved by 08_fit_models.py
+(OUTPUT/models/). The pre- and post-breakpoint segments are drawn
 separately so the fitted line breaks at the breakpoint. Modelled series use a
 log y-axis, because the models are fitted to ln(count): straight lines on the
 chart are the model's straight segments.
 
-Plots are saved to data/results/plots/ (git-ignored), since most of them show
-LPD data, which must not be committed.
+Plots are saved to OUTPUT/figures/.
 """
 
 from pathlib import Path
@@ -21,12 +20,12 @@ import pandas as pd
 from matplotlib.ticker import FuncFormatter, LogLocator, MaxNLocator
 from statsmodels.regression.linear_model import OLSResults
 
-ROOT = Path(__file__).parent
-LPD_PATH = ROOT / "data" / "model_ready_lpd.csv"
-LPD_RAW_PATH = ROOT / "data" / "lpd_series.csv"
-CONDOR_PATH = ROOT / "data_external" / "model_ready_condor.csv"
-MODEL_DIR = ROOT / "data" / "results" / "models"
-PLOT_DIR = ROOT / "data" / "results" / "plots"
+ROOT = Path(__file__).parent.parent
+LPD_PATH = ROOT / "DATA" / "model_ready_lpd.csv"
+LPD_RAW_PATH = ROOT / "DATA" / "lpd_series.csv"
+CONDOR_PATH = ROOT / "DATA" / "model_ready_condor.csv"
+MODEL_DIR = ROOT / "OUTPUT" / "models"
+PLOT_DIR = ROOT / "OUTPUT" / "figures"
 
 # Colours (validated categorical slots 1-2 plus chart ink, light mode).
 BLUE, ORANGE = "#2a78d6", "#eb6834"

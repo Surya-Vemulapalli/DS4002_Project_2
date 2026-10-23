@@ -15,5 +15,5 @@
   },
   "how_to_predict": "Load the .pickle with OLSResults.load(); forecast = model.predict([[1, year]]).",
   "object_file": "forecast_usfws_azut_wild_linear.pickle",
-  "created_by": "forecast_models.py"
+  "created_by": "10_forecast_models.py"
 }

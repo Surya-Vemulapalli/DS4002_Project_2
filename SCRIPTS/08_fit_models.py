@@ -5,8 +5,7 @@ Outcome: log_count = ln(count), so exp(coef) - 1 is a proportional change.
 - after:      immediate level change at the breakpoint
 - time_after: change in yearly growth after the breakpoint
 
-Results are written to data/results/ (git-ignored), since they are derived
-from LPD data, which must not be committed.
+Tables are written to OUTPUT/tables/ and fitted models to OUTPUT/models/.
 """
 
 from pathlib import Path
@@ -16,11 +15,11 @@ import pandas as pd
 import statsmodels.formula.api as smf
 from statsmodels.stats.stattools import durbin_watson
 
-ROOT = Path(__file__).parent
-LPD_PATH = ROOT / "data" / "model_ready_lpd.csv"
-CONDOR_PATH = ROOT / "data_external" / "model_ready_condor.csv"
-OUT_DIR = ROOT / "data" / "results"
-MODEL_DIR = OUT_DIR / "models"
+ROOT = Path(__file__).parent.parent
+LPD_PATH = ROOT / "DATA" / "model_ready_lpd.csv"
+CONDOR_PATH = ROOT / "DATA" / "model_ready_condor.csv"
+OUT_DIR = ROOT / "OUTPUT" / "tables"
+MODEL_DIR = ROOT / "OUTPUT" / "models"
 
 ITS_FORMULA = "log_count ~ time + after + time_after"
 # Comparative ITS: flock and flock_time let CA and AZ/UT have different
@@ -96,7 +95,7 @@ def save_models(models: list[dict]) -> list[Path]:
     .summary(), .predict() or .get_prediction() without refitting:
 
         from statsmodels.regression.linear_model import OLSResults
-        model = OLSResults.load("data/results/models/model_1_bald_eagle_all_years.pickle")
+        model = OLSResults.load("OUTPUT/models/model_1_bald_eagle_all_years.pickle")
 
     Only load pickle files you created yourself: loading a pickle can run code.
     """

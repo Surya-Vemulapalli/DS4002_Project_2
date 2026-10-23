@@ -8,9 +8,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from prepare_data import COLUMNS, LPD_SOURCE, add_log_count
+from helpers import COLUMNS, LPD_SOURCE, add_log_count
 
-DATA_DIR = Path(__file__).parent / "data"
+DATA_DIR = Path(__file__).parent.parent / "DATA"
 
 # Bald eagle and peregrine falcon files already share the same layout.
 eagle = pd.read_csv(DATA_DIR / "bald_eagle_cleaned.csv")

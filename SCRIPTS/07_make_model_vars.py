@@ -19,11 +19,11 @@ from pathlib import Path
 
 import pandas as pd
 
-ROOT = Path(__file__).parent
-LPD_PATH = ROOT / "data" / "lpd_series.csv"
-FLOCKS_PATH = ROOT / "data_external" / "usfws_condor_flocks.csv"
-LPD_OUT = ROOT / "data" / "model_ready_lpd.csv"
-CONDOR_OUT = ROOT / "data_external" / "model_ready_condor.csv"
+ROOT = Path(__file__).parent.parent
+LPD_PATH = ROOT / "DATA" / "lpd_series.csv"
+FLOCKS_PATH = ROOT / "DATA" / "usfws_condor_flocks.csv"
+LPD_OUT = ROOT / "DATA" / "model_ready_lpd.csv"
+CONDOR_OUT = ROOT / "DATA" / "model_ready_condor.csv"
 
 # Breakpoint year for each modelled series (record ID -> year).
 BREAKPOINTS = {

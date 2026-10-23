@@ -5,10 +5,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-ROOT = Path(__file__).parent
-LPD_PATH = ROOT / "data" / "lpd_series.csv"
-USFWS_PATH = ROOT / "data_external" / "usfws_condor.csv"
-FLOCKS_PATH = ROOT / "data_external" / "usfws_condor_flocks.csv"
+ROOT = Path(__file__).parent.parent
+LPD_PATH = ROOT / "DATA" / "lpd_series.csv"
+USFWS_PATH = ROOT / "DATA" / "usfws_condor.csv"
+FLOCKS_PATH = ROOT / "DATA" / "usfws_condor_flocks.csv"
 
 # Iteration 5: condor series chosen for the analysis, with their role.
 # USFWS global wild / captive / total series are deliberately not used.
@@ -67,7 +67,7 @@ def check_log_transform() -> tuple[pd.DataFrame, pd.DataFrame]:
     positive = data["count"] > 0
 
     # Recompute both candidate transforms ourselves rather than trusting
-    # clean_data.py. isclose allows for floating-point rounding.
+    # 04_clean_data.py. isclose allows for floating-point rounding.
     matches_ln = np.isclose(data["log_count"], np.log(data["count"].where(positive)))
     matches_ln1p = np.isclose(data["log_count"], np.log1p(data["count"]))
     data = data.assign(matches_ln=matches_ln, matches_ln1p=matches_ln1p)

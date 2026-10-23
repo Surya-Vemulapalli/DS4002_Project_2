@@ -17,5 +17,5 @@
   },
   "how_to_predict": "Load the .pickle with OLSResults.load(); forecast = exp(model.predict([[1, year]]) + model.scale / 2) (log-normal mean back-transformation).",
   "object_file": "forecast_usfws_ca_wild_exponential.pickle",
-  "created_by": "forecast_models.py"
+  "created_by": "10_forecast_models.py"
 }

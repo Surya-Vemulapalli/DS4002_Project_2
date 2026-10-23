@@ -1,12 +1,12 @@
 """Step 2: reshape the chosen LPD records into one long (year, count) series
-per species and save them to data/ (which is git-ignored)."""
+per species and save them to DATA/."""
 
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
-from load_data import SPECIES, load_lpd, year_columns
+from helpers import (COLUMNS, LPD_SOURCE, SPECIES, add_log_count, load_lpd,
+                     year_columns)
 
 # One record per species, chosen in Step 1. Using a single record ID per
 # species guarantees we never mix different units or locations.
@@ -20,33 +20,12 @@ CHOSEN_IDS = {
     "Peregrine falcon": 28210,
 }
 
-OUTPUT_PATH = Path(__file__).parent / "data" / "birds_cleaned.csv"
-EAGLE_PATH = Path(__file__).parent / "data" / "bald_eagle_cleaned.csv"
+OUTPUT_PATH = Path(__file__).parent.parent / "DATA" / "birds_cleaned.csv"
+EAGLE_PATH = Path(__file__).parent.parent / "DATA" / "bald_eagle_cleaned.csv"
 
 # Condor counts from the USFWS 2025 Annual Population Status report (not part
 # of the LPD), already in long format in this file alongside LPD record 3328.
-CONDOR_PATH = Path(__file__).parent / "data" / "california_condor_long.csv"
-
-LPD_SOURCE = "Living Planet Database 2026.1"
-COLUMNS = ["species", "ID", "location", "units", "year", "count",
-           "log_count", "log_transform", "source"]
-
-
-def add_log_count(df: pd.DataFrame) -> pd.DataFrame:
-    """Add a log_count column, choosing the transform separately per series.
-
-    - Series with no zero counts use log(count).
-    - Series containing zeros (condor record 3328, 1987-1991) use
-      log(count + 1), because log(0) is undefined.
-    log(count + 1) is not used everywhere because for small index values
-    (e.g. 0.003) it is almost equal to the raw value, not its log.
-    """
-    df = df.copy()
-    has_zero = df.groupby(["species", "ID"])["count"].transform(lambda c: (c <= 0).any())
-    df["log_count"] = np.where(has_zero, np.log1p(df["count"]), np.log(df["count"].clip(lower=1e-12)))
-    df["log_transform"] = np.where(has_zero, "log(count + 1)", "log(count)")
-    return df
-
+CONDOR_PATH = Path(__file__).parent.parent / "DATA" / "california_condor_long.csv"
 
 def load_usfws_condor() -> pd.DataFrame:
     """Return the USFWS condor series, renamed to match the LPD columns.
