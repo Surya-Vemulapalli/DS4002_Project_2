@@ -11,8 +11,12 @@ import pandas as pd
 
 from helpers import SPECIES, load_species, year_columns
 
+# Load only the US records for the three study species (see helpers.py), and
+# find the yearly count columns ("1950" ... "2022").
 birds = load_species()
 years = year_columns(birds)
+
+# One summary row per LPD record, so the records can be compared side by side.
 
 rows = []
 for _, rec in birds.iterrows():
@@ -28,7 +32,12 @@ for _, rec in birds.iterrows():
         "n_years": len(observed),
     })
 
+# Longest records first within each species: long, recent series are the
+# best candidates for an interrupted time series. The chosen IDs (2910, 28210,
+# 3328) are hard-coded in 02_prepare_data.py.
 summary = pd.DataFrame(rows).sort_values(["species", "n_years"], ascending=[True, False])
+
+# Print the whole table (wide, with long location names) instead of saving it.
 
 pd.set_option("display.width", 250, "display.max_colwidth", 70, "display.max_rows", 200)
 print(summary.to_string(index=False))

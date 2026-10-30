@@ -24,6 +24,7 @@ from pathlib import Path
 
 import pandas as pd
 
+# File locations, relative to the repository's top folder.
 ROOT = Path(__file__).parent.parent
 LPD_PATH = ROOT / "DATA" / "lpd_series.csv"
 FLOCKS_PATH = ROOT / "DATA" / "usfws_condor_flocks.csv"
@@ -63,12 +64,16 @@ def add_segment_vars(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_lpd() -> pd.DataFrame:
+    """Bald eagle (2910) and peregrine falcon (28210) with the segment variables.
+    Condor record 3328 is left out: it is described, not modelled."""
     lpd = pd.read_csv(LPD_PATH, dtype={"ID": str})
     lpd = lpd[lpd["ID"].isin(["2910", "28210"])]
     return add_segment_vars(lpd)
 
 
 def build_condor() -> pd.DataFrame:
+    """Both wild condor flocks with the segment variables and the flock
+    comparison terms, ready for one comparative model (model 5 in 08)."""
     flocks = pd.read_csv(FLOCKS_PATH, dtype={"ID": str})
     # Population series only; the *-DEATHS rows are a separate outcome.
     flocks = flocks[flocks["ID"].isin(["USFWS-CA-WILD", "USFWS-AZUT-WILD"])]
@@ -84,6 +89,7 @@ def build_condor() -> pd.DataFrame:
 
 
 if __name__ == "__main__":
+    # Build and save both model-ready files.
     lpd = build_lpd()
     condor = build_condor()
     lpd.to_csv(LPD_OUT, index=False)

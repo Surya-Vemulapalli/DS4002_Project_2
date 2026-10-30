@@ -6,6 +6,10 @@
 Loads the Living Planet Database (LPD), pulls out the three bird species, and
 holds the column layout and log transform shared by 02_prepare_data.py and
 03_combine_data.py.
+
+Inputs:  DATA/LPD_public.csv (raw Living Planet Database, read by load_lpd()
+         and load_species(); download it first, see DATA/README.md)
+Outputs: none (functions and constants only; nothing is saved)
 """
 
 from pathlib import Path

@@ -1,7 +1,10 @@
 """Collect the main results into summary tables (no new analysis here).
 
-Reads the tables written by 10_forecast_models.py and 11_significance_tests.py
-and writes, to OUTPUT/tables/:
+Inputs:  OUTPUT/tables/coefficients.csv, model_summary.csv (from 08_fit_models.py)
+         OUTPUT/tables/forecast_comparison.csv, forecasts.csv,
+         forecast_projections_yearly.csv (from 10_forecast_models.py)
+         OUTPUT/tables/significance_test_results.csv (from 11_significance_tests.py)
+Outputs (all in OUTPUT/tables/):
 - results_summary_segmented_regression.csv: one row per segmented-regression
   model: fit (R-squared, Durbin-Watson), level and slope changes with their
   two-sided t-test p-values, and the bootstrap test of the 20% growth goal.
@@ -19,7 +22,7 @@ and writes, to OUTPUT/tables/:
   from every forecasting model (linear, exponential, logistic), not only the best.
 - results_summary.md: all six tables, formatted for reading on GitHub.
 
-Run 10_forecast_models.py and 11_significance_tests.py first.
+Run 08_fit_models.py, 10_forecast_models.py and 11_significance_tests.py first.
 """
 
 from pathlib import Path
@@ -75,6 +78,8 @@ def error(x):
 
 
 def segmented_regression_table() -> pd.DataFrame:
+    """One row per segmented-regression model: fit statistics, the level and
+    slope changes with their p-values, and the 20% growth test."""
     sig = pd.read_csv(TABLE_DIR / "significance_test_results.csv")
     # Unrounded % effects from 08_fit_models.py. significance_test_results.csv
     # stores them rounded to 2 decimals, and rounding again can be off by 0.1.
@@ -178,6 +183,8 @@ def significance_tests_table() -> pd.DataFrame:
 
 
 def forecast_table() -> pd.DataFrame:
+    """One row per series for its best forecasting model: test errors, 95% PI
+    coverage, and the 2028 and 2035 forecasts with prediction intervals."""
     comp = pd.read_csv(TABLE_DIR / "forecast_comparison.csv", dtype={"ID": str})
     fc = pd.read_csv(TABLE_DIR / "forecasts.csv", dtype={"ID": str})
     rows = []

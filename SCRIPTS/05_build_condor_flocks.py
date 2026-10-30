@@ -15,6 +15,10 @@ Rules:
 
 USFWS reports are US government works (public domain). DOI asks to be
 credited as the source, which the source and source_detail columns do.
+
+Inputs:  none (the values are typed in below, from the USFWS report PDFs)
+Outputs: DATA/usfws_condor_flocks.csv (yearly California and Arizona/Utah
+         wild flock counts and deaths, with the report and page for each value)
 """
 
 from pathlib import Path
@@ -101,9 +105,11 @@ VALUES = [
 
 
 def build() -> pd.DataFrame:
+    """Turn VALUES into one long table (one row per series and year), with the
+    same columns as the other cleaned files plus source_detail."""
     rows = []
     for record_id, year, count, (report, url), where in VALUES:
-        location, units = SERIES[record_id]
+        location, units = SERIES[record_id]  # look up the series' description
         rows.append({
             "species": "California condor",
             "ID": record_id,
@@ -136,7 +142,9 @@ if __name__ == "__main__":
     flocks.to_csv(OUT_PATH, index=False)
     print(f"Saved {len(flocks)} rows to {OUT_PATH}\n")
 
-    # Coverage report: years found and gaps for each series.
+    # Coverage report: years found and gaps for each series. Gaps are counted
+    # from when each wild flock began (California releases 1992, Arizona 1996),
+    # to show which years have no official count.
     expected_start = {"USFWS-CA-WILD": 1992, "USFWS-AZUT-WILD": 1996}
     for record_id, s in flocks.groupby("ID"):
         years = sorted(s["year"])

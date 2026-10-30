@@ -31,8 +31,19 @@ Every model is also projected for each year from the year after its last
 data point through 2035 (forecast_projections_yearly.csv); the 2028 and 2035
 forecasts in forecasts.csv are taken from that same projection.
 
-Tables go to OUTPUT/tables/, plots to OUTPUT/figures/ and saved models to
-OUTPUT/models/forecast/.
+Inputs:  DATA/lpd_series.csv (bald eagle 2910, peregrine falcon 28210;
+         from 04_clean_data.py)
+         DATA/usfws_condor_flocks.csv (California and Arizona/Utah wild flocks;
+         from 05_build_condor_flocks.py)
+Outputs: OUTPUT/tables/forecast_comparison.csv  test errors (MAE, MAPE, RMSE)
+                                                and 95% PI coverage, per model
+         OUTPUT/tables/forecasts.csv            2028 and 2035 forecasts with
+                                                95% prediction intervals
+         OUTPUT/tables/forecast_projections_yearly.csv  every year to 2035
+         OUTPUT/tables/forecast_parameters.csv  fitted parameters per model
+         OUTPUT/figures/forecast_bald_eagle.png, forecast_peregrine_falcon.png,
+         forecast_condor_flocks.png, model_comparison_metrics.png
+         OUTPUT/models/forecast/forecast_<series>_<model>.pickle and .json
 """
 
 import json
@@ -75,21 +86,36 @@ def design(years: np.ndarray) -> np.ndarray:
     return add_constant(np.asarray(years, dtype=float), has_constant="add")
 
 
+# Each model class has the same methods, so run() can treat them alike:
+#   fit(years, counts)  fit the model and return itself
+#   predict(years)      point forecasts on the original count scale
+#   interval(years)     (forecast, 95% PI low, 95% PI high) for each year
+#   params()            key parameters for forecast_parameters.csv
+#   save() / to_dict()  what is written to OUTPUT/models/forecast/
+
+
 class Linear:
+    """Straight-line growth: the same number of birds (or index units) added
+    every year. Fitted by ordinary least squares on the counts."""
     name = "Linear"
 
     def fit(self, years, counts):
+        """Fit count = a + b * year."""
         self.res = OLS(counts, design(years)).fit()
         return self
 
     def predict(self, years):
+        """Point forecasts: a + b * year."""
         return np.asarray(self.res.predict(design(years)))
 
     def interval(self, years):
+        """95% prediction intervals from the regression: they cover a single
+        new observation (obs_ci), not just the fitted line."""
         f = self.res.get_prediction(design(years)).summary_frame(alpha=0.05)
         return f["mean"].values, f["obs_ci_lower"].values, f["obs_ci_upper"].values
 
     def params(self):
+        """Yearly change in the count."""
         return {"slope_per_year": self.res.params[1]}
 
     formula = "count = a + b * year"
@@ -103,27 +129,35 @@ class Linear:
         return [path]
 
     def to_dict(self):
+        """Parameters for the JSON summary."""
         return {"a_intercept": self.res.params[0], "b_slope_per_year": self.res.params[1]}
 
 
 class Exponential:
+    """Constant percentage growth every year. Fitted as a straight line on
+    ln(count), then converted back to the count scale."""
     name = "Exponential"
 
     def fit(self, years, counts):
+        """Fit ln(count) = a + b * year (needs counts above zero)."""
         self.res = OLS(np.log(counts), design(years)).fit()
         self.s2 = self.res.scale  # residual variance on the log scale
         return self
 
     def predict(self, years):
-        # Log-normal mean: exp(mu + sigma^2 / 2).
+        """Point forecasts on the count scale. exp() of the log-scale line gives
+        the median; adding sigma^2 / 2 gives the mean (log-normal correction)."""
         return np.exp(np.asarray(self.res.predict(design(years))) + self.s2 / 2)
 
     def interval(self, years):
+        """95% prediction intervals on the log scale, converted back with exp(),
+        so they are wider above the forecast than below it."""
         f = self.res.get_prediction(design(years)).summary_frame(alpha=0.05)
         return (np.exp(f["mean"].values + self.s2 / 2),
                 np.exp(f["obs_ci_lower"].values), np.exp(f["obs_ci_upper"].values))
 
     def params(self):
+        """Yearly growth rate in percent: (e^b - 1) * 100."""
         return {"growth_pct_per_year": np.expm1(self.res.params[1]) * 100}
 
     formula = "ln(count) = a + b * year"
@@ -138,19 +172,27 @@ class Exponential:
         return [path]
 
     def to_dict(self):
+        """Parameters for the JSON summary."""
         return {"a_intercept_log": self.res.params[0], "b_slope_log": self.res.params[1],
                 "sigma2_log_residual_variance": self.s2,
                 "growth_pct_per_year": np.expm1(self.res.params[1]) * 100}
 
 
 def logistic_curve(t, K, r, t0):
+    """S-shaped growth: K is the ceiling (carrying capacity), r the growth rate
+    and t0 the year of fastest growth (where the curve is at K / 2)."""
     return K / (1 + np.exp(-r * (t - t0)))
 
 
 class Logistic:
+    """Growth that slows as the population approaches a ceiling (K). Fitted by
+    non-linear least squares; used for the bald eagle and peregrine only."""
     name = "Logistic"
 
     def _fit_curve(self, years, counts, p0):
+        """Fit K, r and t0, starting from p0. The bounds keep the fit sensible:
+        K between half and K_MAX_MULTIPLE times the largest count, r between
+        0.0001 and 2, and t0 within 100 years of the data."""
         top = counts.max()
         bounds = ([0.5 * top, 1e-4, years.min() - 100],
                   [K_MAX_MULTIPLE * top, 2.0, years.max() + 100])
@@ -159,14 +201,18 @@ class Logistic:
         return popt
 
     def fit(self, years, counts):
+        """Fit the curve and keep the residuals for the bootstrap intervals."""
         self.years = np.asarray(years, dtype=float)
         self.counts = np.asarray(counts, dtype=float)
+        # Starting guess: ceiling 50% above the largest count, moderate growth,
+        # fastest growth in the middle of the data.
         p0 = [1.5 * self.counts.max(), 0.1, np.median(self.years)]
         self.popt = self._fit_curve(self.years, self.counts, p0)
         self.resid = self.counts - logistic_curve(self.years, *self.popt)
         return self
 
     def predict(self, years):
+        """Point forecasts from the fitted curve."""
         return logistic_curve(np.asarray(years, dtype=float), *self.popt)
 
     def interval(self, years):
@@ -188,6 +234,8 @@ class Logistic:
         return self.predict(years), np.percentile(sims, 2.5, axis=0), np.percentile(sims, 97.5, axis=0)
 
     def params(self):
+        """K, r and t0, and whether K hit its upper bound (a sign the data do
+        not show a ceiling yet, so K is not reliable)."""
         K, r, t0 = self.popt
         return {"K": K, "r": r, "t0": t0,
                 "K_at_upper_bound": bool(np.isclose(K, K_MAX_MULTIPLE * self.counts.max(), rtol=1e-3))}
@@ -203,6 +251,8 @@ class Logistic:
         return []
 
     def to_dict(self):
+        """Parameters plus the training data and residuals, which are needed to
+        recreate the bootstrap prediction intervals."""
         K, r, t0 = self.popt
         return {"K": K, "r": r, "t0": t0,
                 "training_years": self.years.tolist(),
@@ -326,18 +376,27 @@ def loocv_scores(model_cls, years, counts):
 
 
 def load_series(record_id: str, path: Path) -> pd.DataFrame:
+    """One series from a cleaned data file, in year order."""
     df = pd.read_csv(path, dtype={"ID": str})
     return df[df["ID"] == record_id].sort_values("year").reset_index(drop=True)
 
 
 def run():
+    """For every series: compare the models on held-out data, pick the best,
+    then refit every model on all years and project it to 2035.
+
+    Returns the comparison, forecast, parameter and projection tables, the
+    fitted models (for the plots) and the list of saved model files.
+    """
     comparison, forecasts, params, fits, saved, projections = [], [], [], {}, [], []
     for record_id, label, path, model_classes, method in SERIES:
         s = load_series(record_id, path)
+        # Plain arrays of years and counts, as the model classes expect.
         years = s["year"].to_numpy(dtype=float)
         counts = s["count"].to_numpy(dtype=float)
 
-        # 1. Compare models.
+        # 1. Compare models on data they were not fitted to (holdout for the
+        # long bird series, leave-one-out for the short condor series).
         scores = {}
         for cls in model_classes:
             sc, detail = (holdout_scores if method == "holdout" else loocv_scores)(cls, years, counts)
@@ -368,9 +427,12 @@ def run():
                                   "last_data_year": int(years[-1]),
                                   "years_ahead": int(y - years[-1]),
                                   "best_model": cls.name == best})
+            # Keep the fitted parameters and save the model itself.
             params.append({"ID": record_id, "series": label, "model": cls.name, **model.params()})
             saved.extend(save_forecast_model(record_id, label, model, cls.name == best, years))
 
+    # Mark the lowest-error model per series under each metric. "best" (RMSE)
+    # is the one used for the forecasts; MAE and MAPE are shown for comparison.
     comparison = pd.DataFrame(comparison)
     comparison["best"] = comparison.groupby("ID")["rmse"].transform("min") == comparison["rmse"]
     comparison["best_mae"] = comparison.groupby("ID")["mae"].transform("min") == comparison["mae"]
@@ -380,6 +442,7 @@ def run():
 
 
 # ---- Plots -------------------------------------------------------------
+# One colour per model, used in every forecast plot, plus the shared chart style.
 COLORS = {"Linear": "#2a78d6", "Exponential": "#eb6834", "Logistic": "#1baf7a"}
 SURFACE, INK, INK_2, MUTED, GRID, AXIS = "#fcfcfb", "#0b0b0b", "#52514e", "#898781", "#e1e0d9", "#c3c2b7"
 plt.rcParams.update({
@@ -391,9 +454,12 @@ plt.rcParams.update({
 
 
 def draw_series(ax, fit, best, ylabel):
+    """One forecast panel: the observed data, each model's fitted curve
+    extended to 2035, and the 2028 and 2035 forecasts with 95% prediction
+    intervals (whiskers). A vertical line marks where the data end."""
     s = fit["data"]
     first, last = s["year"].min(), s["year"].max()
-    grid = np.arange(first, FORECAST_YEARS[-1] + 0.01, 0.25)
+    grid = np.arange(first, FORECAST_YEARS[-1] + 0.01, 0.25)  # smooth x values for the curves
     names = list(fit["models"])
     for i, (name, (model, mean, low, high)) in enumerate(fit["models"].items()):
         tag = " (best)" if name == best else ""
@@ -413,6 +479,8 @@ def draw_series(ax, fit, best, ylabel):
 
 
 def plot_all(fits, comparison):
+    """Save the forecast plots: one each for the bald eagle and peregrine
+    falcon, and one with both condor flocks side by side."""
     PLOT_DIR.mkdir(parents=True, exist_ok=True)
     best = comparison[comparison["best"]].set_index("ID")["model"]
 
@@ -484,6 +552,7 @@ def plot_metric_comparison(comparison):
 
 
 if __name__ == "__main__":
+    # Fit, compare and forecast, then save the tables and plots.
     comparison, forecasts, params, fits, saved, projections = run()
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     comparison.to_csv(OUT_DIR / "forecast_comparison.csv", index=False)
@@ -493,6 +562,7 @@ if __name__ == "__main__":
     plot_all(fits, comparison)
     plot_metric_comparison(comparison)
 
+    # Print the results to the screen.
     pd.set_option("display.width", 220)
     print("Model comparison (MAE, MAPE %, RMSE on the count scale):\n")
     print(comparison.round(5).to_string(index=False))

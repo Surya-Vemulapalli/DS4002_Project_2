@@ -19,10 +19,13 @@ For each model:
 For model 5 (CA vs AZ/UT), it tests whether California's post-2019 level and
 slope changes differ from Arizona/Utah's (`flock_after`, `flock_time_after`).
 
+Inputs:  OUTPUT/models/model_*.pickle (the five fitted models, from
+         08_fit_models.py, with their standard errors)
+Outputs: OUTPUT/tables/significance_test_results.csv (one row per model);
+         the full results are also printed to the screen
+
 Usage: run 08_fit_models.py first, then from the repository's top folder run
     python SCRIPTS/11_significance_tests.py
-It reads the model .pickle files in OUTPUT/models/. Output prints to the
-screen and is saved to OUTPUT/tables/significance_test_results.csv.
 Requires: pip install statsmodels pandas numpy scipy
 """
 
@@ -50,12 +53,17 @@ START_YEAR = {"bald_eagle": 1970, "peregrine": 1970, "condor": 2012}
 
 
 def load(path):
-    # Loaded inside a function: statsmodels formula models need a calling frame
+    """Load a model saved by 08_fit_models.py.
+
+    It is loaded inside a function because statsmodels formula models need a
+    calling frame when they are unpickled.
+    """
     with open(path, "rb") as f:
         return pickle.load(f)
 
 
 def start_year(path):
+    """First calendar year of a model's series, matched from its file name."""
     return next(y for k, y in START_YEAR.items() if k in path)
 
 
@@ -118,10 +126,12 @@ def bootstrap_growth(res, c, block):
 
 
 def flag(p):
+    """Label a two-sided p-value as significant or not at ALPHA = 0.05."""
     return "SIGNIFICANT" if p < ALPHA else "not significant"
 
 
 def main():
+    """Run every test for each saved model, print the results and save the table."""
     rows = []
     # Only the segmented-regression models; forecast models are in models/forecast/.
     for model_path in sorted(MODEL_DIR.glob("*.pickle")):

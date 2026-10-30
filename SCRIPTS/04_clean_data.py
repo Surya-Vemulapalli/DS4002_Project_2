@@ -1,10 +1,14 @@
 """Clean DATA/birds_consolidated.csv and split it by source.
 
-Outputs:
-- DATA/lpd_series.csv: Living Planet Database rows (records 2910, 28210,
-  3328).
-- DATA/usfws_condor.csv: USFWS condor rows. US government work
-  (public domain), so this can be committed.
+Recomputes log_count as ln(count) (blank for zero counts, marked by
+zero_count) and flags the bald eagle 2009 outlier (outlier_flag).
+
+Inputs:  DATA/birds_consolidated.csv (from 03_combine_data.py)
+Outputs: DATA/lpd_series.csv   (Living Planet Database rows: records 2910,
+                                28210 and 3328)
+         DATA/usfws_condor.csv (USFWS condor rows: global wild, captive and
+                                total series and the 2025 California count;
+                                US government work, public domain)
 """
 
 from pathlib import Path
