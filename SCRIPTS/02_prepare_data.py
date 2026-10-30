@@ -1,5 +1,11 @@
 """Step 2: reshape the chosen LPD records into one long (year, count) series
-per species and save them to DATA/."""
+per species and save them to DATA/.
+
+Inputs:  DATA/LPD_public.csv (raw Living Planet Database, read via helpers.py)
+         DATA/california_condor_long.csv (USFWS condor counts)
+Outputs: DATA/birds_cleaned.csv     (all chosen series, long format)
+         DATA/bald_eagle_cleaned.csv (bald eagle record 2910 only)
+"""
 
 from pathlib import Path
 

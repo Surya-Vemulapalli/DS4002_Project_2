@@ -1,5 +1,11 @@
 """Step 1: list every US record for the three species so we can pick one
-time series per species before modelling."""
+time series per species before modelling.
+
+Inputs:  DATA/LPD_public.csv (raw Living Planet Database, read via helpers.py;
+         download it first, see DATA/README.md)
+Outputs: none saved; prints a table of candidate records (species, ID,
+         location, units, first and last year, number of years)
+"""
 
 import pandas as pd
 

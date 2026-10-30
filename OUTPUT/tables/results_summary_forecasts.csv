@@ -1,0 +1,5 @@
+Series,Best model,Test,MAE,MAPE,RMSE,95% PI coverage (test),95% PI check,2028 forecast (95% PI),2035 forecast (95% PI)
+Bald eagle,Logistic,Holdout 2012-2022,0.00842,2.4%,0.0103,11/11 (100%),Passed,0.380 (0.363-0.403),0.392 (0.373-0.417)
+Peregrine falcon,Logistic,Holdout 2012-2022,0.000811,3.2%,0.00103,10/11 (91%),Passed,0.0331 (0.0323-0.0343),0.0378 (0.0365-0.0395)
+"California condor, CA wild flock",Linear,Leave-one-out (6 points),5.34,3.4%,6.57,5/6 (83%),Passed,239 (222-256),285 (262-307)
+"California condor, AZ/UT wild flock",Linear,Leave-one-out (14 points),8.26,8.6%,10.6,13/14 (93%),Passed,118 (93-143),138 (106-169)

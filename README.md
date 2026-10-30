@@ -8,7 +8,7 @@ This project asks whether major conservation actions changed the population tren
 |---|---|
 | `README.md` | This orientation file. |
 | `LICENSE.md` | MIT license for the project's code and documentation. |
-| `SCRIPTS/` | Python scripts, numbered in the order they are run, plus shared helpers and the significance tests. |
+| `SCRIPTS/` | Python scripts, numbered in the order they are run, plus shared helpers (`helpers.py`). |
 | `DATA/` | Initial data, intermediate and analysis-ready (final) datasets, metadata (`DATA/README.md`), and explanatory plots. |
 | `OUTPUT/` | Results: figures, tables, and the saved fitted models. |
 
@@ -51,7 +51,8 @@ DS4002_Project_2/
 │   ├── 08_fit_models.py            Fits the five segmented-regression models
 │   ├── 09_plot_models.py           Plots observed data with fitted lines
 │   ├── 10_forecast_models.py       Forecasts to 2028 and 2035; compares models (MAE, MAPE, RMSE)
-│   └── significance_tests.py       t-tests on the level and slope changes; 20% growth test
+│   ├── 11_significance_tests.py    t-tests on the level and slope changes; bootstrap 20% growth test
+│   └── 12_results_table.py         Summary tables of the main results
 ├── DATA/
 │   ├── README.md                   Metadata: summary, provenance, license, ethics, data dictionary, plots
 │   ├── LPD_public.csv              Initial: Living Planet Database 2026.1 (NOT included; download it, see step 3)
@@ -76,8 +77,14 @@ DS4002_Project_2/
     │       forecast_condor_flocks.png, model_comparison_metrics.png                        (from 10)
     ├── tables/
     │   ├── coefficients.csv, model_summary.csv, fitted_values.csv                          (from 08)
-    │   ├── forecasts.csv, forecast_comparison.csv, forecast_parameters.csv                 (from 10)
-    │   └── significance_test_results.csv                                                   (from significance_tests.py)
+    │   ├── forecasts.csv, forecast_comparison.csv, forecast_parameters.csv,
+    │   │   forecast_projections_yearly.csv                                                 (from 10)
+    │   ├── significance_test_results.csv                                                   (from 11)
+    │   └── results_summary.md, results_summary_segmented_regression.csv,
+    │       results_summary_significance_tests.csv,
+    │       results_summary_forecasts.csv, results_summary_forecast_errors.csv,
+    │       results_summary_projections_best_models.csv,
+    │       results_summary_forecasts_all_models.csv                                        (from 12)
     └── models/
         ├── model_1_bald_eagle_all_years.pickle ... model_5_condor_ca_vs_az_ut.pickle        (from 08)
         └── forecast/   forecast_<series>_<model>.pickle and .json                           (from 10)
@@ -116,14 +123,15 @@ DS4002_Project_2/
    - Steps 02-05 write the intermediate and final datasets in `DATA/`.
    - Step 06 prints the data checks and saves the two explanatory plots to `DATA/plots/`.
    - Step 07 writes `DATA/model_ready_lpd.csv` and `DATA/model_ready_condor.csv`.
-   - Step 08 fits the five segmented-regression models, saves them to `OUTPUT/models/`, and writes the coefficient, summary and fitted-value tables to `OUTPUT/tables/`.
+   - Step 08 fits the five segmented-regression models, saves them to `OUTPUT/models/`, and writes the coefficient, summary and fitted-value tables to `OUTPUT/tables/`. In model 5 (California vs. Arizona/Utah), `after` and `time_after` are the Arizona/Utah flock's changes at 2019; the lead-ban comparison is `flock_after` and `flock_time_after` (how California's changes differ from Arizona/Utah's).
    - Step 09 saves the fitted-model plots to `OUTPUT/figures/`.
-   - Step 10 saves the forecast models to `OUTPUT/models/forecast/`, the forecast tables to `OUTPUT/tables/`, and the forecast and model-comparison plots to `OUTPUT/figures/`.
-6. **Run the significance tests** (after step 08, which saves the models they read):
+   - Step 10 compares the forecasting models on held-out data (MAE, RMSE, MAPE, and how many held-out values fall inside their 95% prediction intervals), saves the forecast models to `OUTPUT/models/forecast/`, the forecast tables to `OUTPUT/tables/`, and the forecast and model-comparison plots to `OUTPUT/figures/`.
+6. **Run the significance tests and build the results tables:**
    ```
-   python SCRIPTS/significance_tests.py
+   python SCRIPTS/11_significance_tests.py
+   python SCRIPTS/12_results_table.py
    ```
-   This prints R-squared, the Durbin-Watson test, the two-sided t-tests on the level and slope changes, and the one-sided test of the 20% growth goal for each model, and saves them to `OUTPUT/tables/significance_test_results.csv`.
+   This prints R-squared, the Durbin-Watson test, the two-sided t-tests on the level and slope changes, and the one-sided bootstrap test of the 20% growth goal for each model, and saves them to `OUTPUT/tables/significance_test_results.csv`. Step 12 then collects the main results into `OUTPUT/tables/results_summary.md` (easiest to read on GitHub) and two CSV versions.
 7. **Check the results.** Compare your files in `OUTPUT/` with the ones in this repository. The tables and models should match exactly.
 
 ## References

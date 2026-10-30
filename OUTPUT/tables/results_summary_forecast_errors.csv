@@ -1,0 +1,11 @@
+Series,Model,Test,Data points,MAE,RMSE,MAPE,95% PI coverage (test),95% PI check,Best model (lowest RMSE)
+Bald eagle,Linear,Holdout 2012-2022,53,0.0188,0.0220,5.4%,9/11 (82%),Passed,No
+Bald eagle,Exponential,Holdout 2012-2022,53,0.154,0.163,43.9%,0/11 (0%),Failed,No
+Bald eagle,Logistic,Holdout 2012-2022,53,0.00842 (lowest),0.0103 (lowest),2.4% (lowest),11/11 (100%),Passed,Yes
+Peregrine falcon,Linear,Holdout 2012-2022,53,0.00514,0.00530,20.8%,1/11 (9%),Failed,No
+Peregrine falcon,Exponential,Holdout 2012-2022,53,0.00348,0.00409,13.6%,9/11 (82%),Passed,No
+Peregrine falcon,Logistic,Holdout 2012-2022,53,0.000811 (lowest),0.00103 (lowest),3.2% (lowest),10/11 (91%),Passed,Yes
+"California condor, CA wild flock",Linear,Leave-one-out,6,5.34 (lowest),6.57 (lowest),3.4% (lowest),5/6 (83%),Passed,Yes
+"California condor, CA wild flock",Exponential,Leave-one-out,6,8.12,9.98,5.0%,5/6 (83%),Passed,No
+"California condor, AZ/UT wild flock",Linear,Leave-one-out,14,8.26 (lowest),10.6 (lowest),8.6% (lowest),13/14 (93%),Passed,Yes
+"California condor, AZ/UT wild flock",Exponential,Leave-one-out,14,8.50,11.0,8.8%,13/14 (93%),Passed,No

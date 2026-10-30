@@ -1,6 +1,14 @@
 """Data checks for the segmented regression project (no modelling here).
 
 Also saves explanatory plots of the cleaned data to DATA/plots/.
+
+Inputs:  DATA/lpd_series.csv (from 04_clean_data.py)
+         DATA/usfws_condor.csv (from 04_clean_data.py)
+         DATA/usfws_condor_flocks.csv (from 05_build_condor_flocks.py)
+Outputs: printed check tables (years, duplicates, log transform, outlier flag,
+         condor series summary)
+         DATA/plots/lpd_population_indices_1970_2022.png
+         DATA/plots/condor_population_by_series.png
 """
 
 from pathlib import Path

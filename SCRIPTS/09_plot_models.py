@@ -1,5 +1,11 @@
 """Plot observed data and fitted segmented regression lines.
 
+Inputs:  DATA/model_ready_lpd.csv, DATA/model_ready_condor.csv (observed data)
+         DATA/lpd_series.csv (condor record 3328, for the 1982-1993 plot)
+         OUTPUT/models/model_*.pickle (fitted models from 08_fit_models.py)
+Outputs: OUTPUT/figures/bald_eagle.png, peregrine_falcon.png,
+         condor_flocks.png, condor_1982_1993.png
+
 Fitted lines come from the models saved by 08_fit_models.py
 (OUTPUT/models/). The pre- and post-breakpoint segments are drawn
 separately so the fitted line breaks at the breakpoint. Modelled series use a
@@ -20,6 +26,7 @@ import pandas as pd
 from matplotlib.ticker import FuncFormatter, LogLocator, MaxNLocator
 from statsmodels.regression.linear_model import OLSResults
 
+# File locations, relative to the repository's top folder.
 ROOT = Path(__file__).parent.parent
 LPD_PATH = ROOT / "DATA" / "model_ready_lpd.csv"
 LPD_RAW_PATH = ROOT / "DATA" / "lpd_series.csv"
@@ -32,6 +39,7 @@ BLUE, ORANGE = "#2a78d6", "#eb6834"
 SURFACE, INK, INK_2, MUTED = "#fcfcfb", "#0b0b0b", "#52514e", "#898781"
 GRID, AXIS = "#e1e0d9", "#c3c2b7"
 
+# Shared chart style: light background, muted axes, light grid, no top/right spines.
 plt.rcParams.update({
     "figure.facecolor": SURFACE, "axes.facecolor": SURFACE,
     "axes.edgecolor": AXIS, "axes.labelcolor": INK_2,
@@ -44,11 +52,17 @@ plt.rcParams.update({
 
 
 def load_model(name: str) -> OLSResults:
+    """Load a model saved by 08_fit_models.py, e.g. "model_3_peregrine_falcon"."""
     return OLSResults.load(str(MODEL_DIR / f"{name}.pickle"))
 
 
 def segment_frame(years: np.ndarray, first_year: int, bp: int, flock: int | None = None) -> pd.DataFrame:
-    """Build model variables for arbitrary (fractional) years."""
+    """Build model variables for arbitrary (fractional) years.
+
+    These are the same variables 07_make_model_vars.py creates for the data,
+    so the saved model can predict a smooth line between the observed years.
+    flock = 1 (California) or 0 (Arizona/Utah) is only needed for model 5.
+    """
     d = pd.DataFrame({"year": years})
     d["time"] = d["year"] - first_year
     d["after"] = (d["year"] >= bp).astype(int)
@@ -63,24 +77,30 @@ def segment_frame(years: np.ndarray, first_year: int, bp: int, flock: int | None
 
 def plot_fitted(ax, model, first_year, last_year, bp, color, label, flock=None, lw=2.0):
     """Draw the fitted line as two separate segments, split at the breakpoint."""
+    # The first segment stops just before the breakpoint so the jump at the
+    # breakpoint (the `after` term) shows as a gap rather than a sloped line.
     for start, end, lab in [(first_year, bp - 1e-6, label), (bp, last_year, None)]:
         years = np.linspace(start, end, 200)
         pred = model.predict(segment_frame(years, first_year, bp, flock))
+        # The model predicts ln(count); exp() converts back to the original scale.
         ax.plot(years, np.exp(pred), color=color, lw=lw, label=lab, solid_capstyle="round")
 
 
 def plot_observed(ax, df, color, label):
+    """Observed values as dots, drawn above the fitted lines."""
     ax.plot(df["year"], df["count"], "o", color=color, ms=5.5, mec=SURFACE, mew=0.7,
             label=label, zorder=3)
 
 
 def mark_breakpoint(ax, bp, text):
+    """Vertical line at the breakpoint year, labelled above the plot area."""
     ax.axvline(bp, color=MUTED, lw=1, zorder=1)
     ax.text(bp, 1.02, f" {text}", transform=ax.get_xaxis_transform(),
             color=INK_2, fontsize=9, ha="left", va="bottom")
 
 
 def log_axis(ax):
+    """Log y-axis with plain-number tick labels (0.1, 0.2 ... not 10^-1)."""
     ax.set_yscale("log")
     ax.yaxis.set_major_locator(LogLocator(subs=[1, 1.5, 2, 3, 5, 7]))
     ax.yaxis.set_minor_locator(LogLocator(subs=[1, 2, 3, 4, 5, 6, 7, 8, 9]))
@@ -89,6 +109,7 @@ def log_axis(ax):
 
 
 def finish(fig, ax, title, subtitle, ylabel, path):
+    """Add axis labels, title and subtitle, then save the figure and close it."""
     ax.set_xlabel("Year")
     ax.set_ylabel(ylabel)
     fig.suptitle(title, x=0.06, ha="left", fontsize=13, fontweight="bold", color=INK)
@@ -100,6 +121,8 @@ def finish(fig, ax, title, subtitle, ylabel, path):
 
 
 def plot_bald_eagle(lpd):
+    """Bald eagle index with the fitted lines of models 1 (all years) and 2
+    (without the 2009 outlier), to show the outlier barely changes the fit."""
     eagle = lpd[lpd["ID"] == "2910"]
     m_all = load_model("model_1_bald_eagle_all_years")
     m_no = load_model("model_2_bald_eagle_no_2009_outlier")
@@ -126,6 +149,7 @@ def plot_bald_eagle(lpd):
 
 
 def plot_peregrine(lpd):
+    """Peregrine falcon index with the fitted line of model 3."""
     pf = lpd[lpd["ID"] == "28210"]
     m = load_model("model_3_peregrine_falcon")
     first, last, bp = pf["year"].min(), pf["year"].max(), 1999
@@ -142,6 +166,8 @@ def plot_peregrine(lpd):
 
 
 def plot_condor_flocks(condor):
+    """Both condor flocks with model 5's fitted lines: one model, drawn once
+    with flock = 1 (California) and once with flock = 0 (Arizona/Utah)."""
     m = load_model("model_5_condor_ca_vs_az_ut")
     first, last, bp = condor["year"].min(), condor["year"].max(), 2019
     ca = condor[condor["flock"] == 1]
@@ -170,6 +196,8 @@ def plot_condor_flocks(condor):
 
 
 def plot_condor_collapse(lpd_raw):
+    """LPD record 3328 (1982-1993): descriptive only, no model. A linear axis
+    is used because the series includes zero counts (log(0) is undefined)."""
     c = lpd_raw[lpd_raw["ID"] == "3328"]
     fig, ax = plt.subplots(figsize=(8, 4.2))
     ax.plot(c["year"], c["count"], "-", color=BLUE, lw=2, zorder=2)
@@ -188,6 +216,7 @@ def plot_condor_collapse(lpd_raw):
 
 
 if __name__ == "__main__":
+    # Read the observed data, then draw and save each of the four plots.
     PLOT_DIR.mkdir(parents=True, exist_ok=True)
     lpd = pd.read_csv(LPD_PATH, dtype={"ID": str})
     lpd_raw = pd.read_csv(LPD_RAW_PATH, dtype={"ID": str})
