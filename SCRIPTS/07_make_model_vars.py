@@ -13,6 +13,11 @@ For the condor flock comparison (comparative interrupted time series):
 - flock_time_after: flock * time_after
 
 No models are fitted here.
+
+Inputs:  DATA/lpd_series.csv (from 04_clean_data.py)
+         DATA/usfws_condor_flocks.csv (from 05_build_condor_flocks.py)
+Outputs: DATA/model_ready_lpd.csv    (bald eagle and peregrine, with the variables above)
+         DATA/model_ready_condor.csv (CA and AZ/UT wild flocks, with the flock terms)
 """
 
 from pathlib import Path

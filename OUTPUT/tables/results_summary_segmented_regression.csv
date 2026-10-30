@@ -1,0 +1,6 @@
+Model,Event,n,R2,Adj. R2,Durbin-Watson,Standard errors,Level change,Level p,Slope change per year,Slope p,Growth since event,Bootstrap 95% lower bound,20% goal met
+1. Bald eagle (all years),Delisting (2007),53,0.985,0.984,0.43,"Newey-West, 3 lags",-13.4%,0.0158 *,-3.15%,< 0.0001 *,+21.1%,+5.2%,No
+2. Bald eagle (no 2009 outlier),Delisting (2007),52,0.985,0.985,0.34,"Newey-West, 3 lags",-15.5%,0.0051 *,-2.94%,< 0.0001 *,+25.1%,+7.5%,No
+3. Peregrine falcon,Delisting (1999),53,0.992,0.991,0.15,"Newey-West, 3 lags",+12.7%,0.0539,-0.95%,0.0236 *,+155.9%,+126.0%,Yes
+"4. California condor, CA flock alone",CA lead ban (2019),6,0.995,0.989,2.97,OLS (too few points for Newey-West),-6.6%,0.1898,-2.57%,0.0781,+20.7%,+14.1%,No
+"5. California condor, CA vs AZ/UT",CA lead ban (2019),20,0.976,0.963,AZ/UT 1.78; CA 2.97,HC3,-24.1% (CA - AZ/UT),0.1512,+0.89% (CA - AZ/UT),0.8545,-,-,-

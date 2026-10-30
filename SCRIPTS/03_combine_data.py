@@ -1,5 +1,10 @@
 """Combine the cleaned per-species files into one consolidated long CSV.
 
+Inputs:  DATA/bald_eagle_cleaned.csv (from 02_prepare_data.py)
+         DATA/peregrine_falcon_28210_cleaned.csv (initial data file)
+         DATA/california_condor_long.csv (initial data file)
+Outputs: DATA/birds_consolidated.csv (all three species, one row per series-year)
+
 Every row keeps its record ID and location, so separate series (different
 units, locations or sources) stay distinguishable and are never merged.
 """

@@ -1,0 +1,11 @@
+Series,Model,2028 forecast,2028 95% PI,2035 forecast,2035 95% PI
+Bald eagle,Linear,0.426,0.401-0.451,0.471,0.446-0.497
+Bald eagle,Exponential,0.590,0.436-0.783,0.752,0.552-1.00
+Bald eagle,Logistic (best),0.380,0.363-0.403,0.392,0.373-0.417
+Peregrine falcon,Linear,0.0280,0.0237-0.0323,0.0316,0.0272-0.0359
+Peregrine falcon,Exponential,0.0440,0.0368-0.0523,0.0624,0.0519-0.0744
+Peregrine falcon,Logistic (best),0.0331,0.0323-0.0343,0.0378,0.0365-0.0395
+"California condor, CA wild flock",Linear (best),239,222-256,285,262-307
+"California condor, CA wild flock",Exponential,250,213-292,325,263-401
+"California condor, AZ/UT wild flock",Linear (best),118,93-143,138,106-169
+"California condor, AZ/UT wild flock",Exponential,122,93-157,152,109-209

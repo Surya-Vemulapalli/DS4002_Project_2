@@ -18,9 +18,18 @@ Comparison (MAE, MAPE and RMSE, all on the original count scale):
   RMSE = sqrt(mean((actual - predicted)^2))
 - The "best" model (used to flag forecasts and label plots) is still chosen
   by RMSE. best_mae and best_mape columns show the winner under each metric.
+- 95% prediction-interval check: for every held-out point, a 95% interval is
+  built from the training data only, and the share of actual values inside
+  is reported (pi_covered / pi_n). About 95% should fall inside; the check
+  fails only if coverage is significantly below 95% (one-sided binomial test,
+  pi_binom_p < 0.05), because a single miss among 6-14 points is expected.
 
 95% prediction intervals: from the regression for linear and exponential
 models, and from a residual bootstrap for the logistic model.
+
+Every model is also projected for each year from the year after its last
+data point through 2035 (forecast_projections_yearly.csv); the 2028 and 2035
+forecasts in forecasts.csv are taken from that same projection.
 
 Tables go to OUTPUT/tables/, plots to OUTPUT/figures/ and saved models to
 OUTPUT/models/forecast/.
@@ -37,6 +46,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy.optimize import OptimizeWarning, curve_fit
+from scipy.stats import binom
 # Import OLS directly rather than statsmodels.api: the full api also loads
 # time-series extensions that this machine's Application Control blocks.
 from statsmodels.regression.linear_model import OLS
@@ -54,6 +64,8 @@ TEST_FRACTION = 0.2      # last 20% of years held out (eagle, peregrine)
 N_BOOT = 2000            # bootstrap resamples for logistic intervals
 K_MAX_MULTIPLE = 50      # upper bound on K as a multiple of the largest count
 SEED = 42
+PI_LEVEL = 0.95          # nominal coverage of the prediction intervals
+PI_CHECK_ALPHA = 0.05    # coverage check fails if significantly below PI_LEVEL
 
 warnings.filterwarnings("ignore", category=OptimizeWarning)
 
@@ -268,24 +280,49 @@ def score(actual, predicted) -> dict:
             "rmse": rmse(actual, predicted)}
 
 
+def coverage(actual, low, high) -> dict:
+    """Check of the 95% prediction intervals on the held-out points: how many
+    actual values fell inside their interval, built without seeing them.
+
+    About 95% should. With so few test points (6-14), one miss already drops
+    coverage below 95%, so the check uses a one-sided binomial test: it fails
+    only if coverage is significantly below 95%, i.e.
+    P(this many hits or fewer | n, 0.95) < 0.05. Intervals that are too wide
+    (100% coverage) are not penalised by this test.
+    """
+    actual, low, high = (np.asarray(a, dtype=float) for a in (actual, low, high))
+    hits = int(np.sum((actual >= low) & (actual <= high)))
+    n = len(actual)
+    p = float(binom.cdf(hits, n, PI_LEVEL))
+    return {"pi_covered": hits, "pi_n": n, "pi_coverage_pct": 100 * hits / n,
+            "pi_binom_p": p, "pi_check_passed": bool(p >= PI_CHECK_ALPHA)}
+
+
 def holdout_scores(model_cls, years, counts):
     """Train on earlier years, test on the last TEST_FRACTION of years."""
     n_test = int(np.ceil(TEST_FRACTION * len(years)))
     model = model_cls().fit(years[:-n_test], counts[:-n_test])
     predicted = model.predict(years[-n_test:])
+    # 95% prediction intervals for the held-out years, from the training fit only.
+    _, low, high = model.interval(years[-n_test:])
     test_span = f"{int(years[-n_test])}-{int(years[-1])}"
-    return score(counts[-n_test:], predicted), test_span
+    return {**score(counts[-n_test:], predicted),
+            **coverage(counts[-n_test:], low, high)}, test_span
 
 
 def loocv_scores(model_cls, years, counts):
     """Leave each observation out once, predict it from the rest."""
-    actual, predicted = [], []
+    actual, predicted, low, high = [], [], [], []
     for i in range(len(years)):
         keep = np.arange(len(years)) != i
         model = model_cls().fit(years[keep], counts[keep])
         actual.append(counts[i])
         predicted.append(model.predict(years[i:i + 1])[0])
-    return score(actual, predicted), "leave-one-out"
+        # 95% prediction interval for the left-out point, from the other points only.
+        _, lo, hi = model.interval(years[i:i + 1])
+        low.append(lo[0])
+        high.append(hi[0])
+    return {**score(actual, predicted), **coverage(actual, low, high)}, "leave-one-out"
 
 
 def load_series(record_id: str, path: Path) -> pd.DataFrame:
@@ -294,7 +331,7 @@ def load_series(record_id: str, path: Path) -> pd.DataFrame:
 
 
 def run():
-    comparison, forecasts, params, fits, saved = [], [], [], {}, []
+    comparison, forecasts, params, fits, saved, projections = [], [], [], {}, [], []
     for record_id, label, path, model_classes, method in SERIES:
         s = load_series(record_id, path)
         years = s["year"].to_numpy(dtype=float)
@@ -310,11 +347,20 @@ def run():
                                **sc})
         best = min(scores, key=scores.get)  # best model is chosen by RMSE
 
-        # 2. Refit on all years and forecast.
+        # 2. Refit on all years and project every year from the year after the
+        # last data point through the last forecast year. The 2028 and 2035
+        # forecasts are read from this same projection, so they always agree.
         fits[record_id] = {"label": label, "data": s, "models": {}}
+        proj_years = np.arange(years[-1] + 1, FORECAST_YEARS[-1] + 1)
+        at_forecast_years = np.isin(proj_years, FORECAST_YEARS)
         for cls in model_classes:
             model = cls().fit(years, counts)
-            mean, low, high = model.interval(FORECAST_YEARS)
+            proj_mean, proj_low, proj_high = model.interval(proj_years)
+            for y, m, lo, hi in zip(proj_years, proj_mean, proj_low, proj_high):
+                projections.append({"ID": record_id, "series": label, "model": cls.name,
+                                    "year": int(y), "projection": m, "pi_low": lo, "pi_high": hi,
+                                    "best_model": cls.name == best})
+            mean, low, high = (a[at_forecast_years] for a in (proj_mean, proj_low, proj_high))
             fits[record_id]["models"][cls.name] = (model, mean, low, high)
             for y, m, lo, hi in zip(FORECAST_YEARS, mean, low, high):
                 forecasts.append({"ID": record_id, "series": label, "model": cls.name,
@@ -329,7 +375,8 @@ def run():
     comparison["best"] = comparison.groupby("ID")["rmse"].transform("min") == comparison["rmse"]
     comparison["best_mae"] = comparison.groupby("ID")["mae"].transform("min") == comparison["mae"]
     comparison["best_mape"] = comparison.groupby("ID")["mape_pct"].transform("min") == comparison["mape_pct"]
-    return comparison, pd.DataFrame(forecasts), pd.DataFrame(params), fits, saved
+    return (comparison, pd.DataFrame(forecasts), pd.DataFrame(params), fits, saved,
+            pd.DataFrame(projections))
 
 
 # ---- Plots -------------------------------------------------------------
@@ -437,10 +484,11 @@ def plot_metric_comparison(comparison):
 
 
 if __name__ == "__main__":
-    comparison, forecasts, params, fits, saved = run()
+    comparison, forecasts, params, fits, saved, projections = run()
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     comparison.to_csv(OUT_DIR / "forecast_comparison.csv", index=False)
     forecasts.to_csv(OUT_DIR / "forecasts.csv", index=False)
+    projections.to_csv(OUT_DIR / "forecast_projections_yearly.csv", index=False)
     params.to_csv(OUT_DIR / "forecast_parameters.csv", index=False)
     plot_all(fits, comparison)
     plot_metric_comparison(comparison)
